@@ -1,0 +1,209 @@
+/* Motion layer: springy, flowing interaction for every control.
+   Loaded after styles.css. Works with motion.js (pointer highlight, ripple,
+   sliding indicators, list flow). Reduced-motion settings turn it all off. */
+
+:root {
+  --spring: cubic-bezier(.34, 1.56, .64, 1);      /* lively overshoot */
+  --spring-soft: cubic-bezier(.22, 1.25, .36, 1); /* gentle overshoot */
+  --out: cubic-bezier(.22, 1, .36, 1);            /* smooth settle */
+}
+
+/* ---------- every pressable thing ---------- */
+:is(.icon-btn, .pill-btn, .primary-btn, .nav-btn, .key, .call-btn, .end-btn, .round-btn, .send-btn, .attach-btn, .play,
+    .seg button, .convo, .person, .clip, .rec, .dropzone, .switch-row, .retry-btn, .link-btn, .name-btn) {
+  position: relative;
+  transition:
+    transform .5s var(--spring),
+    background-color .35s var(--out), background .35s var(--out),
+    box-shadow .4s var(--out), border-color .35s var(--out),
+    color .3s var(--out), opacity .35s var(--out), filter .35s var(--out);
+}
+:is(.icon-btn, .pill-btn, .round-btn, .attach-btn, .play):hover:not(:disabled) { transform: translateY(-1.5px) scale(1.07); }
+:is(.primary-btn):hover:not(:disabled) { transform: translateY(-1.5px) scale(1.012); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 16px 34px rgba(10,132,255,.5); }
+:is(.key):hover { transform: scale(1.06); }
+:is(.call-btn, .end-btn):hover:not(:disabled) { transform: scale(1.07); }
+:is(.nav-btn):hover { transform: scale(1.07); }
+:is(.send-btn):hover:not(:disabled) { transform: scale(1.1); }
+:is(.retry-btn, .link-btn, .name-btn):hover { transform: translateY(-1px); }
+:is(.convo, .person, .clip, .rec):hover { transform: translateX(3px); }
+:is(.dropzone):hover { transform: scale(1.012); }
+
+/* press: squish fast, then spring back on release */
+:is(.icon-btn, .pill-btn, .round-btn, .attach-btn, .play, .nav-btn, .send-btn):active:not(:disabled) { transform: scale(.88); transition-duration: .12s; }
+:is(.primary-btn):active:not(:disabled) { transform: scale(.975); transition-duration: .12s; }
+:is(.key, .call-btn, .end-btn):active:not(:disabled), .key.pressed { transform: scale(.9); transition-duration: .1s; }
+:is(.convo, .person, .clip, .rec, .switch-row):active { transform: scale(.985); transition-duration: .12s; }
+:is(.dropzone):active { transform: scale(.99); transition-duration: .12s; }
+.seg button:active { transform: scale(.94); transition-duration: .1s; }
+
+/* light that follows the pointer across the glass */
+:is(.icon-btn, .pill-btn, .primary-btn, .nav-btn, .key, .round-btn, .attach-btn, .play, .call-btn, .end-btn,
+    .convo, .person, .clip, .rec, .dropzone, .switch-row)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.2), rgba(255,255,255,.06) 40%, transparent 70%);
+  opacity: 0; transition: opacity .45s var(--out);
+}
+:is(.icon-btn, .pill-btn, .primary-btn, .nav-btn, .key, .round-btn, .attach-btn, .play, .call-btn, .end-btn,
+    .convo, .person, .clip, .rec, .dropzone, .switch-row):hover::after { opacity: 1; }
+:is(button, .convo, .person, .clip, .rec):disabled::after { opacity: 0 !important; }
+
+/* click ripple */
+.rp { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.rp i {
+  position: absolute; border-radius: 50%; pointer-events: none; transform: scale(0); opacity: .9;
+  background: radial-gradient(circle, rgba(255,255,255,.34) 0%, rgba(255,255,255,.12) 35%, rgba(255,255,255,0) 70%);
+  animation: ripple .75s var(--out) forwards;
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+/* ---------- sidebar: liquid indicator ---------- */
+.sidebar .nav-btn { z-index: 1; }
+.sidebar .nav-btn.active { background: transparent; border-color: transparent; box-shadow: none; }
+.nav-glider {
+  position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;
+  transition: transform .62s cubic-bezier(.3, 1.3, .45, 1), width .3s var(--out), height .3s var(--out);
+}
+.nav-glider i {
+  position: absolute; inset: 0; border-radius: 18px;
+  background: linear-gradient(160deg, rgba(255,255,255,.3), rgba(255,255,255,.1));
+  border: 1px solid rgba(255,255,255,.32);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 24px rgba(10,132,255,.4);
+}
+
+/* ---------- segmented switches: sliding thumb ---------- */
+.seg { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; isolation: isolate; }
+.seg::before {
+  content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px;
+  width: calc((100% - 4px) / var(--n, 3)); border-radius: 999px;
+  background: linear-gradient(160deg, rgba(255,255,255,.32), rgba(255,255,255,.14));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 4px 12px rgba(0,0,0,.2);
+  transform: translateX(calc(var(--i, 0) * 100%));
+  transition: transform .55s var(--spring-soft);
+}
+.seg.big::before { top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n, 2)); }
+.seg button.on { background: none; box-shadow: none; }
+.seg button { transition: color .35s var(--out), transform .45s var(--spring); }
+
+/* ---------- toggle switch ---------- */
+.switch { transition: background .4s var(--out), box-shadow .4s var(--out), border-color .4s var(--out); }
+.switch:checked { box-shadow: 0 0 16px rgba(48,209,88,.45); }
+.switch::after { transition: transform .5s var(--spring), width .25s var(--out); }
+.switch:active::after { width: 28px; }
+.switch:checked:active::after { transform: translateX(12px); }
+
+/* ---------- views & panels flow in ---------- */
+.view { animation: none; }
+.view.active { animation: viewIn .45s var(--out); }
+.view.active > * { animation: panelIn .75s var(--spring-soft) both; }
+.view.active > *:nth-child(2) { animation-delay: .07s; }
+.view.active > *:nth-child(3) { animation-delay: .14s; }
+.view.active .settings-col > * { animation: panelIn .75s var(--spring-soft) both; }
+.view.active .settings-col > *:nth-child(2) { animation-delay: .1s; }
+.view.active .settings-col:nth-child(2) > *:nth-child(1) { animation-delay: .07s; }
+.view.active .settings-col:nth-child(2) > *:nth-child(2) { animation-delay: .17s; }
+.view.active .settings-col { animation: none; }
+@keyframes viewIn { from { opacity: 0; } }
+@keyframes panelIn { from { opacity: 0; transform: translateY(16px) scale(.985); } }
+
+/* dial pad keys ripple in */
+.view.active .keypad .key, .keypad.mini:not([hidden]) .key { animation: keyIn .55s var(--spring) both; }
+@keyframes keyIn { from { opacity: 0; transform: scale(.6) translateY(8px); } }
+.view.active .keypad .key:nth-child(1), .keypad.mini:not([hidden]) .key:nth-child(1) { animation-delay: 0.080s; }
+.view.active .keypad .key:nth-child(2), .keypad.mini:not([hidden]) .key:nth-child(2) { animation-delay: 0.100s; }
+.view.active .keypad .key:nth-child(3), .keypad.mini:not([hidden]) .key:nth-child(3) { animation-delay: 0.120s; }
+.view.active .keypad .key:nth-child(4), .keypad.mini:not([hidden]) .key:nth-child(4) { animation-delay: 0.125s; }
+.view.active .keypad .key:nth-child(5), .keypad.mini:not([hidden]) .key:nth-child(5) { animation-delay: 0.145s; }
+.view.active .keypad .key:nth-child(6), .keypad.mini:not([hidden]) .key:nth-child(6) { animation-delay: 0.165s; }
+.view.active .keypad .key:nth-child(7), .keypad.mini:not([hidden]) .key:nth-child(7) { animation-delay: 0.170s; }
+.view.active .keypad .key:nth-child(8), .keypad.mini:not([hidden]) .key:nth-child(8) { animation-delay: 0.190s; }
+.view.active .keypad .key:nth-child(9), .keypad.mini:not([hidden]) .key:nth-child(9) { animation-delay: 0.210s; }
+.view.active .keypad .key:nth-child(10), .keypad.mini:not([hidden]) .key:nth-child(10) { animation-delay: 0.215s; }
+.view.active .keypad .key:nth-child(11), .keypad.mini:not([hidden]) .key:nth-child(11) { animation-delay: 0.235s; }
+.view.active .keypad .key:nth-child(12), .keypad.mini:not([hidden]) .key:nth-child(12) { animation-delay: 0.255s; }
+.keypad.mini:not([hidden]) { animation: fadeIn .3s var(--out); }
+
+/* ---------- inputs ---------- */
+.field input, .search input, .to-row input, select, .dial-display {
+  transition: border-color .35s var(--out), background .35s var(--out), box-shadow .45s var(--out);
+}
+.field input:focus, .search input:focus, .to-row input:focus, select:focus { box-shadow: inset 0 1px 2px rgba(0,0,0,.25), 0 0 0 4px rgba(10,132,255,.18); }
+.composer { transition: border-color .35s var(--out), box-shadow .45s var(--out); }
+.composer:focus-within { box-shadow: inset 0 1px 2px rgba(0,0,0,.25), 0 0 0 4px rgba(10,132,255,.16); }
+.composer textarea { transition: height .25s var(--out); }
+.send-btn:disabled { transform: scale(.8); }
+
+/* ---------- messages ---------- */
+.bubble.new { animation: bubbleIn .55s var(--spring) both; }
+.bubble.new.out { transform-origin: 100% 100%; }
+.bubble.new.in { transform-origin: 0 100%; }
+@keyframes bubbleIn { from { opacity: 0; transform: translateY(10px) scale(.55); } }
+.receipt { animation: fadeIn .5s var(--out) both; }
+#bubbles.swap { animation: swapIn .45s var(--out); }
+@keyframes swapIn { from { opacity: 0; transform: translateX(16px); } }
+.thread-head, .thread-empty { animation: fadeIn .4s var(--out); }
+.convo .udot, .nav-btn .badge:not([hidden]), .rec-pill:not([hidden]) { animation: bump .55s var(--spring) both; }
+.nav-btn .badge.bump { animation: bump .55s var(--spring); }
+@keyframes bump { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } }
+.attach-preview:not([hidden]) { animation: popIn .5s var(--spring) both; }
+@keyframes popIn { from { opacity: 0; transform: translateY(8px) scale(.85); } }
+.bubble .media img { transition: transform .45s var(--spring), box-shadow .4s var(--out); }
+.bubble .media img:hover { transform: scale(1.02); }
+
+/* ---------- lists & progress ---------- */
+.person .icon-btn { transition: opacity .35s var(--out), transform .5s var(--spring), background .3s var(--out); }
+.clip .del, .rec .del { transition: opacity .35s var(--out), transform .5s var(--spring); }
+.clip .bar i, .rec .bar i { transition: width .25s linear; }
+.update-bar i { transition: width .35s var(--out); }
+.steps li { animation: popIn .45s var(--spring-soft) both; }
+.dropzone.over { animation: breathe 1.4s ease-in-out infinite; }
+@keyframes breathe { 50% { box-shadow: 0 0 0 6px rgba(10,132,255,.14); } }
+.tracker:not([hidden]) { animation: panelIn .6s var(--spring-soft) both; }
+.tstep, .tstep i { transition: color .4s var(--out), background .45s var(--out), box-shadow .45s var(--out); }
+.selected-clip { transition: background .4s var(--out), border-color .4s var(--out), color .3s var(--out); }
+.selected-clip.has { animation: popIn .45s var(--spring) both; }
+.play svg { animation: iconIn .35s var(--spring); }
+@keyframes iconIn { from { transform: scale(.4) rotate(-20deg); opacity: 0; } }
+
+/* ---------- call sheet ---------- */
+.call-sheet { animation: fadeIn .4s var(--out) both; }
+.call-sheet .call-card { animation: cardIn .65s var(--spring) both; }
+.call-sheet .call-card > * { animation: panelIn .6s var(--spring-soft) both; }
+.call-sheet .call-card > *:nth-child(2) { animation-delay: .05s; }
+.call-sheet .call-card > *:nth-child(3) { animation-delay: .09s; }
+.call-sheet .call-card > *:nth-child(n+4) { animation-delay: .13s; }
+.call-sheet.leaving { animation: fadeOut .34s var(--out) forwards; }
+.call-sheet.leaving .call-card { animation: cardOut .34s var(--out) forwards; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(34px) scale(.86); } }
+@keyframes cardOut { to { opacity: 0; transform: translateY(18px) scale(.93); } }
+.round-btn.on { transition: background .3s var(--out), color .3s var(--out), transform .5s var(--spring); }
+.call-status { transition: color .3s var(--out); }
+
+/* ---------- lightbox ---------- */
+.lightbox { animation: fadeIn .3s var(--out) both; }
+.lightbox img { animation: zoomIn .55s var(--spring) both; }
+.lightbox.leaving { animation: fadeOut .3s var(--out) forwards; }
+.lightbox.leaving img { animation: zoomOut .3s var(--out) forwards; }
+@keyframes zoomIn { from { opacity: 0; transform: scale(.82); } }
+@keyframes zoomOut { to { opacity: 0; transform: scale(.9); } }
+
+/* ---------- toasts & update banner ---------- */
+.toast { animation: toastIn .6s var(--spring) both; max-height: 240px; overflow: hidden; }
+.toast.leaving { animation: toastOut .4s var(--out) forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(46px) scale(.9); } }
+@keyframes toastOut {
+  60% { opacity: 0; transform: translateX(40px) scale(.94); max-height: 240px; }
+  to { opacity: 0; transform: translateX(40px) scale(.94); max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: -8px; border-width: 0; }
+}
+.update-pill { transform: none; translate: -50% 0; animation: pillIn .65s var(--spring) both; }
+.update-pill.leaving { animation: pillOut .34s var(--out) forwards; }
+@keyframes pillIn { from { opacity: 0; transform: translateY(26px) scale(.85); } }
+@keyframes pillOut { to { opacity: 0; transform: translateY(20px) scale(.92); } }
+
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+
+/* ---------- respect "Reduce motion" ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+  .rp { display: none; }
+}

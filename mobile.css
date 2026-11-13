@@ -1,0 +1,221 @@
+/* Glass Phone on iPhone: phone-sized layout, touch behaviour, and lighter effects.
+   Loaded after styles.css and motion.css, only in the web (iPhone) version. */
+
+html, body { background: #0b0d1e; }
+body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+.dragbar { display: none; }
+.back-btn, .phone-tabs, .nav-btn .lbl, .install-tip { display: none; }
+.rec-side .web-note { margin: 16px 22px 0; }
+
+/* ---------- touch screens: no hover effects (iOS keeps :hover after a tap) ---------- */
+@media (hover: none) {
+  :is(.icon-btn, .pill-btn, .round-btn, .attach-btn, .play, .primary-btn, .key, .call-btn, .end-btn, .nav-btn, .send-btn,
+      .retry-btn, .link-btn, .name-btn, .convo, .person, .clip, .rec, .dropzone):hover:not(:active) { transform: none; }
+  :is(.icon-btn, .pill-btn, .primary-btn, .nav-btn, .key, .round-btn, .attach-btn, .play, .call-btn, .end-btn,
+      .convo, .person, .clip, .rec, .dropzone, .switch-row)::after { display: none; }
+  :is(.convo, .person, .clip, .rec):not(.active):not(.selected):hover { background: transparent; }
+  .icon-btn:not(.ghost):hover { background: var(--glass); }
+  .icon-btn.ghost:hover { background: transparent; }
+  .pill-btn:not(.primary):not(.danger):hover { background: var(--glass-hi); }
+  .key:hover { background: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,.07)); }
+  .nav-btn:hover { background: transparent; }
+  .dropzone:hover { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.28); }
+  .person .icon-btn, .clip .del, .rec .del { opacity: 1; }
+  .bubble .media img:hover { transform: none; }
+  .name-btn:hover { text-decoration: none; }
+  /* pressed states, so taps still feel physical */
+  :is(.convo, .person, .clip, .rec):active { background: rgba(255,255,255,.08); }
+  .key:active { background: rgba(255,255,255,.42); }
+  .nav-btn:active { transform: scale(.9); }
+  ::-webkit-scrollbar { display: none; }
+}
+
+/* ---------- phone layout ---------- */
+@media (max-width: 760px) {
+  :root {
+    --radius: 26px;
+    --tabbar: 64px;
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --bar-gap: max(8px, calc(var(--safe-b) - 12px));
+    --k: min(78px, 21vw, 9.6vh);
+  }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { position: fixed; inset: 0; font-size: 15px; }
+  input, textarea, select, .search input, .to-row input, .field input { font-size: 16px; } /* stops iOS zooming in on focus */
+
+  /* Big live blurs cost battery on a phone: the colour blobs are already soft gradients. */
+  .blob { filter: none; animation: none; opacity: .8; }
+  .b1 { width: 140vw; height: 140vw; left: -60vw; top: -50vw; }
+  .b2 { width: 150vw; height: 150vw; right: -80vw; top: 22%; }
+  .b3 { width: 140vw; height: 140vw; left: -30vw; bottom: -80vw; }
+  .b4 { display: none; }
+  .glass {
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.34), inset 0 -1px 0 rgba(255,255,255,.05), 0 12px 30px rgba(0,0,0,.28);
+  }
+  .key { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+  /* The app always fills exactly what's visible, even with the keyboard up. */
+  .app { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--app-h, 100%); display: block; padding: 0; }
+  .views { position: absolute; inset: 0; }
+
+  /* ---- tab bar ---- */
+  .sidebar {
+    position: fixed; z-index: 30; left: 12px; right: 12px; bottom: var(--bar-gap);
+    width: auto; height: var(--tabbar); padding: 6px; border-radius: 32px;
+    flex-direction: row; justify-content: space-between; align-items: center;
+    transition: transform .5s var(--spring-soft), opacity .3s var(--out);
+  }
+  body.win .sidebar { padding-top: 6px; }
+  .nav-top { display: contents; }
+  .nav-btn { flex: 1; width: auto; height: 52px; border-radius: 26px; flex-direction: column; gap: 1px; display: flex; align-items: center; justify-content: center; }
+  .nav-btn svg { width: 23px; height: 23px; }
+  .nav-btn .lbl { display: block; font-size: 10px; font-weight: 600; letter-spacing: .01em; line-height: 1; }
+  .nav-glider i { border-radius: 26px; }
+  .nav-btn .badge { top: 2px; right: calc(50% - 24px); }
+  .nav-btn .dot { top: 5px; right: calc(50% - 17px); }
+  body.kb .sidebar, body.thread-open .sidebar { transform: translateY(calc(100% + 40px)); opacity: 0; pointer-events: none; }
+
+  /* ---- screens ---- */
+  .view { padding: calc(var(--safe-t) + 6px) 10px calc(var(--tabbar) + var(--bar-gap) + 10px); flex-direction: column; gap: 10px; }
+  body.kb .view { padding-bottom: 8px; }
+  .panel-head { padding: 16px 18px 10px; }
+  h1 { font-size: 30px; }
+  .hint { margin: 0 18px; }
+  .empty-note { padding: 26px 18px; }
+
+  /* ---- messages: list, then the chat slides in ---- */
+  .convo-panel { width: auto; flex: 1; min-height: 0; }
+  .thread-panel { display: none; }
+  #view-messages.in-thread .convo-panel { display: none; }
+  #view-messages.in-thread .thread-panel { display: flex; flex: 1; min-height: 0; animation: chatIn .5s var(--spring-soft) both; }
+  #view-messages.in-thread { padding-bottom: max(8px, var(--safe-b)); }
+  body.kb #view-messages.in-thread { padding-bottom: 8px; }
+  #view-messages:not(.in-thread) .convo-panel { animation: listIn .45s var(--out) both; }
+  .convo { padding: 10px; }
+  .search { margin: 0 14px 8px; }
+  .back-btn { display: grid; width: 34px; height: 38px; margin-left: -4px; flex: none; }
+  .back-btn svg { width: 24px; height: 24px; stroke-width: 2.4; color: var(--blue-2); }
+  .thread-head { padding: 10px 12px 10px 8px; min-height: 62px; gap: 6px; }
+  .who { flex: 1; gap: 10px; }
+  .who > div:last-child { min-width: 0; }
+  .who .avatar { width: 36px; height: 36px; font-size: 13px; }
+  .name-btn { display: block; max-width: 100%; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .head-actions { gap: 6px; }
+  .to-row label { padding-left: 4px; }
+  .bubbles { padding: 12px 12px 6px; overscroll-behavior: contain; }
+  .bubble { max-width: 80%; font-size: 16px; line-height: 1.34; padding: 8px 13px; }
+  .bubble .media img { max-width: min(250px, 64vw); max-height: 320px; }
+  .receipt.err { max-width: 88%; }
+  .composer { margin: 6px 8px 0; }
+  .attach-preview { margin: 6px 8px 0; }
+
+  /* ---- phone: Keypad / Recents / People ---- */
+  #view-phone { align-items: stretch; justify-content: flex-start; }
+  .phone-tabs { display: inline-grid; align-self: center; margin-top: 4px; }
+  .phone-tabs button { padding: 0 18px; }
+  .dialer { width: auto; flex: 1; min-height: 0; padding: 14px 12px; justify-content: center; }
+  .dial-display { font-size: 34px; height: 50px; caret-color: var(--blue); }
+  .dial-name { margin-bottom: 12px; }
+  .keypad { grid-template-columns: repeat(3, var(--k)); gap: calc(var(--k) * .2) calc(var(--k) * .34); }
+  .key { width: var(--k); height: var(--k); }
+  .key b { font-size: calc(var(--k) * .4); }
+  .dial-actions { grid-template-columns: repeat(3, var(--k)); gap: calc(var(--k) * .34); margin-top: calc(var(--k) * .24); }
+  .call-btn { width: var(--k); height: var(--k); }
+  #view-phone .people-panel { display: none; width: auto; flex: 1; min-height: 0; }
+  #view-phone.show-list .dialer { display: none; }
+  #view-phone.show-list .people-panel { display: flex; animation: listIn .45s var(--out) both; }
+  .people-panel .panel-head { display: none; }
+  .people { padding-top: 8px; overflow-y: auto; }
+  .person { padding: 9px 8px 9px 10px; gap: 10px; }
+  .person .when { font-size: 11px; }
+
+  /* ---- audio calls, recordings, settings: one scrolling column ---- */
+  #view-drops, #view-recordings, #view-settings { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  #view-drops > *, #view-recordings > * { flex: none; }
+  .clips-panel, .recs-panel { overflow: visible; }
+  .clips, .recs { overflow: visible; flex: none; }
+  .drop-panel, .rec-side { width: auto; overflow: visible; }
+  .drop-panel .field, .drop-panel .primary-btn, .drop-panel .tracker, .drop-panel .sub-head, .drop-panel .history, .drop-panel .empty-note { margin-left: 18px; margin-right: 18px; }
+  .drop-panel > .primary-btn, .drop-panel .primary-btn { width: calc(100% - 36px); }
+  .drop-panel .hint, .rec-note { margin-left: 18px; margin-right: 18px; }
+  .dropzone { margin: 2px 14px 10px; padding: 16px; }
+  .clips { padding: 0 8px 10px; }
+  .clip { padding: 10px; }
+  .clip .del { width: 36px; height: 36px; }
+
+  .recs { padding: 0 8px 10px; }
+  .rec { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; column-gap: 8px; row-gap: 8px; padding: 10px; align-items: center; }
+  .rec .avatar { display: none; }
+  .rec .play { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+  .rec .meta { grid-column: 2; grid-row: 1; }
+  .rec .seg { grid-column: 2 / span 3; grid-row: 2; justify-self: start; }
+  .rec .icon-btn:not(.del) { grid-column: 3; grid-row: 1; }
+  .rec .del { grid-column: 4; grid-row: 1; }
+  .rec .icon-btn { width: 36px; height: 36px; }
+  .rec .bar { height: 5px; }
+  .rec-side > .field, .rec-side > .sub-head, .rec-side > .stem-list { margin-left: 18px; margin-right: 18px; }
+  .switch-row { margin: 4px 18px 0; }
+  .rec-side > .field, #rec-open-folder { display: none; }
+  .rec-side .web-note { margin: 14px 18px 0; }
+
+  #view-settings.active { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
+  .settings-col { display: flex; flex-direction: column; gap: 10px; }
+  .settings-card, .update-card, .settings-card.info { width: auto; }
+  .settings-card.info { display: block; padding: 18px; }
+  .settings-card form { margin: 0 18px; }
+  .audio-card .field, .audio-card .hint, .steps, .settings-foot, .update-status, .update-bar, .update-actions { margin-left: 18px; margin-right: 18px; }
+
+  /* ---- in-call screen fills the phone ---- */
+  .call-sheet { place-items: stretch; background: rgba(4,6,16,.5); }
+  .call-card {
+    width: auto; border-radius: 0; border: 0; justify-content: center; background: rgba(12,14,32,.35);
+    padding: calc(var(--safe-t) + 24px) 20px calc(var(--safe-b) + 34px); box-shadow: none;
+  }
+  .call-card::before { display: none; }
+  .call-name { font-size: 30px; padding: 0 10px; }
+  .call-status { font-size: 16px; margin-bottom: 34px; }
+  .call-controls { gap: 40px; margin-bottom: 44px; }
+  .round-btn { width: 78px; height: 78px; }
+  .round-btn svg { width: 28px; height: 28px; }
+  .round-btn span { font-size: 11px; }
+  .keypad.mini { grid-template-columns: repeat(3, 66px); gap: 12px 22px; }
+  .keypad.mini .key { width: 66px; height: 66px; }
+  .end-btn { width: 78px; height: 78px; }
+
+  /* ---- toasts drop in from the top ---- */
+  .toasts { top: calc(var(--safe-t) + 8px); left: 12px; right: 12px; align-items: stretch; }
+  .toast { max-width: none; font-size: 14px; padding: 12px 15px; animation-name: toastDrop; }
+  .toast.leaving { animation-name: toastLift; }
+  @keyframes toastDrop { from { opacity: 0; transform: translateY(-26px) scale(.94); } }
+  @keyframes toastLift {
+    60% { opacity: 0; transform: translateY(-18px) scale(.96); max-height: 240px; }
+    to { opacity: 0; transform: translateY(-18px) scale(.96); max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: -8px; border-width: 0; }
+  }
+
+  .update-pill { bottom: calc(var(--tabbar) + var(--bar-gap) + 12px); max-width: calc(100vw - 24px); }
+  .lightbox img { max-width: 94vw; max-height: 80vh; }
+
+  @keyframes chatIn { from { opacity: 0; transform: translateX(40px); } }
+  @keyframes listIn { from { opacity: 0; transform: translateX(-24px); } }
+
+  /* ---- "Add to Home Screen" tip (shown in Safari only) ---- */
+  .install-tip {
+    position: fixed; z-index: 40; left: 12px; right: 12px; bottom: calc(var(--tabbar) + var(--bar-gap) + 12px);
+    display: flex; align-items: center; gap: 12px; padding: 12px 10px 12px 14px; border-radius: 22px; font-size: 13px;
+    animation: popIn .6s var(--spring) both;
+  }
+  .install-tip[hidden] { display: none; }
+  .install-tip img { width: 44px; height: 44px; border-radius: 11px; flex: none; }
+  .install-tip p { margin: 0; flex: 1; color: var(--ink-2); }
+  .install-tip strong { color: var(--ink); }
+  .install-tip svg.inline { width: 15px; height: 15px; vertical-align: -2px; color: var(--blue-2); }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  #view-messages.in-thread .thread-panel, #view-messages:not(.in-thread) .convo-panel, #view-phone.show-list .people-panel { animation: none; }
+}
+
+.install-tip.leaving { animation: pillOut .34s var(--out) forwards; }

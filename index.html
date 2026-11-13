@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d1e">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Glass Phone">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="description" content="Text and call from your Twilio number.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
+                 connect-src 'self' https: wss://*.twilio.com; media-src 'self' blob: data: https:; worker-src 'self'; manifest-src 'self'">
+  <title>Glass Phone</title>
+  <link rel="stylesheet" href="styles.css?v=1.4.0">
+  <link rel="stylesheet" href="motion.css?v=1.4.0">
+  <link rel="stylesheet" href="mobile.css?v=1.4.0">
+</head>
+<body>
+  <div class="wallpaper" aria-hidden="true">
+    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span>
+  </div>
+  <div class="dragbar"></div>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <nav class="sidebar glass" aria-label="Sections">
+      <div class="nav-top">
+        <button class="nav-btn active" data-view="messages" title="Messages (⌘1)" aria-label="Messages">
+          <svg viewBox="0 0 24 24"><path d="M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.13 4.17 2.94 5.54-.13 1.34-.7 2.6-1.66 3.55 2.1-.02 3.88-.8 5.02-1.66.86.2 1.76.32 2.7.32 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5Z"/></svg>
+          <span class="badge" id="msg-badge" hidden></span>
+        </button>
+        <button class="nav-btn" data-view="phone" title="Phone (⌘2)" aria-label="Phone">
+          <svg viewBox="0 0 24 24"><path d="M6.6 3.2 8.9 3a1 1 0 0 1 1 .63l1.3 3.2a1 1 0 0 1-.27 1.13L9.2 9.5a11.6 11.6 0 0 0 5.3 5.3l1.54-1.74a1 1 0 0 1 1.13-.27l3.2 1.3a1 1 0 0 1 .63 1l-.2 2.3A2.3 2.3 0 0 1 18.5 19.5 14.5 14.5 0 0 1 4.5 5.5a2.3 2.3 0 0 1 2.1-2.3Z"/></svg>
+        </button>
+        <button class="nav-btn" data-view="drops" title="Audio calls (⌘3)" aria-label="Audio calls">
+          <svg viewBox="0 0 24 24"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10.5v3" stroke-linecap="round"/></svg>
+        </button>
+        <button class="nav-btn" data-view="recordings" title="Recordings (⌘4)" aria-label="Recordings">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+      <button class="nav-btn" data-view="settings" title="Settings (⌘5)" aria-label="Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" stroke-linecap="round"/></svg>
+        <span class="dot" id="settings-dot" hidden></span>
+      </button>
+    </nav>
+
+    <main class="views">
+      <!-- MESSAGES -->
+      <section class="view active" id="view-messages">
+        <aside class="glass convo-panel">
+          <header class="panel-head">
+            <h1>Messages</h1>
+            <button class="icon-btn" id="new-msg" title="New message (⌘N)" aria-label="New message">
+              <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+            </button>
+          </header>
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4" stroke-linecap="round"/></svg>
+            <input id="convo-search" placeholder="Search" autocomplete="off">
+          </div>
+          <ul class="convos" id="convos"></ul>
+          <div class="empty-note" id="convos-empty" hidden>No conversations yet.<br>Tap the pencil to text someone.</div>
+        </aside>
+
+        <div class="glass thread-panel">
+          <header class="thread-head" id="thread-head" hidden>
+            <div class="to-row" id="to-row" hidden>
+              <label for="to-input">To:</label>
+              <input id="to-input" placeholder="Name or number" autocomplete="off">
+            </div>
+            <div class="who" id="who">
+              <div class="avatar" id="thread-avatar"></div>
+              <div>
+                <button class="name-btn" id="thread-name" title="Click to set a name"></button>
+                <div class="sub" id="thread-number"></div>
+              </div>
+            </div>
+            <div class="head-actions" id="thread-actions">
+              <button class="icon-btn" id="thread-call" title="Call" aria-label="Call">
+                <svg viewBox="0 0 24 24"><path d="M6.6 3.2 8.9 3a1 1 0 0 1 1 .63l1.3 3.2a1 1 0 0 1-.27 1.13L9.2 9.5a11.6 11.6 0 0 0 5.3 5.3l1.54-1.74a1 1 0 0 1 1.13-.27l3.2 1.3a1 1 0 0 1 .63 1l-.2 2.3A2.3 2.3 0 0 1 18.5 19.5 14.5 14.5 0 0 1 4.5 5.5a2.3 2.3 0 0 1 2.1-2.3Z"/></svg>
+              </button>
+              <button class="icon-btn" id="thread-drop" title="Call and play audio" aria-label="Call and play audio">
+                <svg viewBox="0 0 24 24"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10.5v3" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </header>
+          <div class="bubbles" id="bubbles" hidden></div>
+          <div class="thread-empty" id="thread-empty">
+            <div class="big-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.13 4.17 2.94 5.54-.13 1.34-.7 2.6-1.66 3.55 2.1-.02 3.88-.8 5.02-1.66.86.2 1.76.32 2.7.32 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5Z"/></svg>
+            </div>
+            <p>Pick a conversation or start a new one.</p>
+          </div>
+          <div class="attach-preview" id="attach-preview" hidden>
+            <img id="attach-img" alt="">
+            <span class="fname" id="attach-name"></span>
+            <button type="button" class="icon-btn ghost" id="attach-remove" aria-label="Remove picture">
+              <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <form class="composer" id="composer" autocomplete="off" hidden>
+            <button type="button" class="attach-btn" id="attach-btn" title="Add a picture" aria-label="Add a picture">
+              <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m4 17 5-4.5 3.5 3 3-2.5 4.5 4" stroke-linejoin="round"/></svg>
+            </button>
+            <input type="file" id="attach-input" accept="image/jpeg,image/png,image/gif,image/heic,image/heif,.heic,.heif" hidden>
+            <textarea id="compose-text" rows="1" placeholder="Text message"></textarea>
+            <button class="send-btn" id="send-btn" type="submit" aria-label="Send" disabled>
+              <svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- PHONE -->
+      <section class="view" id="view-phone">
+        <div class="glass dialer">
+          <input class="dial-display" id="dial-number" placeholder="Enter number" autocomplete="off" inputmode="tel">
+          <div class="dial-name" id="dial-name">&nbsp;</div>
+          <div class="keypad" id="keypad"></div>
+          <div class="dial-actions">
+            <span></span>
+            <button class="call-btn" id="dial-call" aria-label="Call">
+              <svg viewBox="0 0 24 24"><path d="M6.6 3.2 8.9 3a1 1 0 0 1 1 .63l1.3 3.2a1 1 0 0 1-.27 1.13L9.2 9.5a11.6 11.6 0 0 0 5.3 5.3l1.54-1.74a1 1 0 0 1 1.13-.27l3.2 1.3a1 1 0 0 1 .63 1l-.2 2.3A2.3 2.3 0 0 1 18.5 19.5 14.5 14.5 0 0 1 4.5 5.5a2.3 2.3 0 0 1 2.1-2.3Z"/></svg>
+            </button>
+            <button class="icon-btn ghost" id="dial-back" aria-label="Delete digit">
+              <svg viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7 6-7Z" stroke-linejoin="round"/><path d="m12 9.5 5 5M17 9.5l-5 5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <aside class="glass people-panel">
+          <header class="panel-head">
+            <div class="seg big" role="tablist" style="--n:2;--i:0">
+              <button class="on" id="tab-recents" role="tab">Recents</button>
+              <button id="tab-people" role="tab">People</button>
+            </div>
+          </header>
+          <ul class="people" id="recents"></ul>
+          <div class="empty-note" id="recents-empty">Calls you make show up here.</div>
+          <ul class="people" id="people" hidden></ul>
+          <div class="empty-note" id="people-empty" hidden>People you text or name show up here.</div>
+        </aside>
+      </section>
+
+      <!-- AUDIO CALLS -->
+      <section class="view" id="view-drops">
+        <div class="glass clips-panel">
+          <header class="panel-head">
+            <h2>Audio clips</h2>
+            <button class="pill-btn" id="add-clip">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Add
+            </button>
+          </header>
+          <div class="dropzone" id="dropzone">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke-linecap="round"/></svg>
+            <div><strong>Drop MP3 or WAV files here</strong><br><span>or click to choose · up to 20 MB</span></div>
+          </div>
+          <ul class="clips" id="clips"></ul>
+        </div>
+
+        <div class="glass drop-panel">
+          <header class="panel-head"><h2>Call &amp; play</h2></header>
+          <p class="hint">When they pick up, they hear your clip. The call hangs up automatically 1 second after it finishes.</p>
+          <p class="rec-note" id="drop-rec-note"><i></i>Recorded: your clip and their side are saved under Recordings.</p>
+          <label class="field">
+            <span>To</span>
+            <input id="drop-to" placeholder="Name or number" autocomplete="off" list="people-list">
+          </label>
+          <div class="field">
+            <span>Clip</span>
+            <div class="selected-clip" id="selected-clip">No clip selected</div>
+          </div>
+          <button class="primary-btn" id="drop-go">
+            <svg viewBox="0 0 24 24"><path d="M6.6 3.2 8.9 3a1 1 0 0 1 1 .63l1.3 3.2a1 1 0 0 1-.27 1.13L9.2 9.5a11.6 11.6 0 0 0 5.3 5.3l1.54-1.74a1 1 0 0 1 1.13-.27l3.2 1.3a1 1 0 0 1 .63 1l-.2 2.3A2.3 2.3 0 0 1 18.5 19.5 14.5 14.5 0 0 1 4.5 5.5a2.3 2.3 0 0 1 2.1-2.3Z"/></svg>
+            Call and play
+          </button>
+
+          <div class="tracker" id="tracker" hidden>
+            <div class="track-steps">
+              <div class="tstep" data-step="calling"><i></i>Calling</div>
+              <div class="tstep" data-step="ringing"><i></i>Ringing</div>
+              <div class="tstep" data-step="playing"><i></i>Playing</div>
+              <div class="tstep" data-step="done"><i></i>Done</div>
+            </div>
+            <div class="track-row">
+              <span id="track-text">Starting…</span>
+              <button class="pill-btn danger" id="drop-cancel">End call</button>
+            </div>
+          </div>
+
+          <h3 class="sub-head">Recent</h3>
+          <ul class="history" id="drop-history"></ul>
+          <div class="empty-note small" id="history-empty">Calls you make here show up in this list.</div>
+        </div>
+      </section>
+
+      <!-- RECORDINGS -->
+      <section class="view" id="view-recordings">
+        <div class="glass recs-panel">
+          <header class="panel-head">
+            <h2>Recordings</h2>
+            <button class="pill-btn" id="rec-open-folder">
+              <svg viewBox="0 0 24 24"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2.2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7.5Z"/></svg>Open folder
+            </button>
+          </header>
+          <ul class="recs" id="recs"></ul>
+          <div class="empty-note" id="recs-empty">Calls you make show up here, both live calls and audio calls.<br>Each one saves your side and theirs as separate files.</div>
+        </div>
+        <div class="glass rec-side">
+          <header class="panel-head"><h2>Call recording</h2></header>
+          <label class="switch-row">
+            <span><strong>Record calls</strong><small>Live calls and audio calls, from when they pick up</small></span>
+            <input type="checkbox" id="rec-enabled" class="switch">
+          </label>
+          <div class="field">
+            <span>Saved in</span>
+            <div class="folder-row">
+              <div class="folder-path" id="rec-folder"></div>
+              <button class="pill-btn" id="rec-change-folder">Change</button>
+            </div>
+          </div>
+          <h3 class="sub-head">Each call saves</h3>
+          <ul class="stem-list">
+            <li><b>Me.wav</b><span>Just your voice (or your clip)</span></li>
+            <li><b>Them.wav</b><span>Just the other person</span></li>
+            <li><b>Both.wav</b><span>Both mixed together</span></li>
+          </ul>
+          <p class="hint small">Some states and countries require everyone on a call to agree to being recorded. Let people know when you're recording.</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="settings-col">
+        <div class="glass settings-card">
+          <header class="panel-head"><h1>Settings</h1></header>
+          <p class="hint" id="welcome-hint">Connect your Twilio account to start texting and calling. You'll find these on the
+            <a href="#" data-ext="https://console.twilio.com">Twilio console</a> home page.</p>
+          <form id="settings-form" autocomplete="off">
+            <label class="field"><span>Account SID</span><input id="set-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false"></label>
+            <label class="field"><span>Auth Token</span><input id="set-token" type="password" placeholder="Paste your Auth Token" spellcheck="false"></label>
+            <label class="field"><span>Your Twilio number</span><input id="set-from" placeholder="+1 555 555 0100" spellcheck="false"></label>
+            <button class="primary-btn" id="settings-save" type="submit">Save &amp; set up</button>
+          </form>
+          <ul class="steps" id="setup-steps"></ul>
+          <div class="settings-foot">
+            <span class="status-chip" id="setup-chip">Not set up</span>
+            <button class="link-btn" id="setup-reset">Reset setup</button>
+          </div>
+        </div>
+        <div class="glass settings-card audio-card">
+          <header class="panel-head"><h2>Audio</h2></header>
+          <label class="field"><span>Microphone</span><select id="mic-select"></select></label>
+          <label class="field"><span>Speaker</span><select id="speaker-select"></select></label>
+          <p class="hint small" id="audio-hint">Used for calls you make in the app.</p>
+        </div>
+        </div>
+        <div class="settings-col">
+        <div class="glass settings-card update-card">
+          <header class="panel-head"><h2>Updates</h2><span class="version" id="app-version"></span></header>
+          <div class="update-status" id="update-status">Glass Phone checks for updates automatically.</div>
+          <div class="update-bar" id="update-bar" hidden><i></i></div>
+          <div class="update-actions">
+            <button class="pill-btn" id="update-check">Check for updates</button>
+            <button class="pill-btn primary" id="update-install" hidden>Restart to update</button>
+          </div>
+        </div>
+        <div class="glass settings-card info">
+          <h2>Good to know</h2>
+          <ul class="notes">
+            <li><strong>Trial accounts</strong> can only text and call numbers you've verified in Twilio, and calls start with a short Twilio trial message.</li>
+            <li><strong>Texting US numbers</strong> from a paid account needs your number registered (toll-free verification or A2P 10DLC), or carriers may block messages.</li>
+            <li><strong>Audio calls</strong> to cell phones need the person's OK to receive recorded messages.</li>
+            <li>Uploaded clips are stored in your Twilio account at hard-to-guess web links, so only someone with the exact link can play them.</li>
+            <li><strong>Shortcuts:</strong> ⌘1–5 switch tabs, ⌘N new message, ⌘F search. On a call, type digits to use the keypad.</li>
+          </ul>
+        </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- In-call sheet -->
+  <div class="call-sheet" id="call-sheet" hidden>
+    <div class="glass call-card">
+      <div class="avatar xl" id="call-avatar"></div>
+      <div class="call-name" id="call-name"></div>
+      <div class="call-status" id="call-status">Calling…</div>
+      <div class="rec-pill" id="call-rec" hidden><i></i>Recording</div>
+      <div class="keypad mini" id="call-keypad" hidden></div>
+      <div class="call-controls">
+        <button class="round-btn" id="call-mute" aria-label="Mute">
+          <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" stroke-linecap="round"/></svg>
+          <span>mute</span>
+        </button>
+        <button class="round-btn" id="call-keys" aria-label="Keypad">
+          <svg viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="6" cy="5" r="1.6"/><circle cx="12" cy="5" r="1.6"/><circle cx="18" cy="5" r="1.6"/><circle cx="6" cy="11" r="1.6"/><circle cx="12" cy="11" r="1.6"/><circle cx="18" cy="11" r="1.6"/><circle cx="6" cy="17" r="1.6"/><circle cx="12" cy="17" r="1.6"/><circle cx="18" cy="17" r="1.6"/><circle cx="12" cy="22" r="1.6"/></g></svg>
+          <span>keypad</span>
+        </button>
+      </div>
+      <button class="end-btn" id="call-end" aria-label="End call">
+        <svg viewBox="0 0 24 24"><path d="M3.5 14.2c4.7-4.3 12.3-4.3 17 0l-.7 2.6a1 1 0 0 1-1.2.7l-3-.8a1 1 0 0 1-.7-.8l-.4-1.9a9 9 0 0 0-5 0l-.4 1.9a1 1 0 0 1-.7.8l-3 .8a1 1 0 0 1-1.2-.7l-.7-2.6Z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="update-pill glass" id="update-pill" hidden>
+    <span id="update-pill-text"></span>
+    <button class="pill-btn primary" id="update-pill-go">Restart</button>
+    <button class="icon-btn ghost" id="update-pill-close" aria-label="Later">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div class="lightbox" id="lightbox" hidden><img id="lightbox-img" alt=""></div>
+  <datalist id="people-list"></datalist>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="api-web.js?v=1.4.0"></script>
+  <script src="motion.js?v=1.4.0"></script>
+  <script src="app.js?v=1.4.0"></script>
+  <script src="mobile.js?v=1.4.0"></script>
+</body>
+</html>
