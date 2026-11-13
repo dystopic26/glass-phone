@@ -109,7 +109,7 @@
     if (!vv) return;
     root.style.setProperty('--app-h', vv.height + 'px');
     root.style.setProperty('--vv-top', vv.offsetTop + 'px');
-    const kb = window.innerHeight - vv.height > 140;
+    const kb = Math.max(window.innerHeight, root.clientHeight) - vv.height > 140 && typingIn(document.activeElement);
     if (body.classList.contains('kb') !== kb) body.classList.toggle('kb', kb);
   }
   const queueFit = () => raf || (raf = requestAnimationFrame(fit));
@@ -117,7 +117,12 @@
     vv.addEventListener('resize', queueFit);
     vv.addEventListener('scroll', queueFit);
   }
+  // iOS can report a wrong height for a moment while a Home Screen app opens or comes
+  // back from the background, so measure again once things settle.
+  ['orientationchange', 'pageshow', 'focusout'].forEach((ev) => window.addEventListener(ev, () => setTimeout(queueFit, 300)));
+  document.addEventListener('visibilitychange', () => !document.hidden && setTimeout(queueFit, 300));
   fit();
+  setTimeout(queueFit, 500);
   // When the keyboard opens in a chat, keep the newest messages in view.
   $('#compose-text').addEventListener('focus', () => setTimeout(() => ($('#bubbles').scrollTop = $('#bubbles').scrollHeight), 350));
 

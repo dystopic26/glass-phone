@@ -38,7 +38,7 @@ body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
     --safe-t: env(safe-area-inset-top, 0px);
     --safe-b: env(safe-area-inset-bottom, 0px);
     --bar-gap: max(8px, calc(var(--safe-b) - 12px));
-    --k: min(78px, 21vw, 9.6vh);
+    --k: min(84px, 21vw, 9.6vh);
   }
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
   body { position: fixed; inset: 0; font-size: 15px; }
@@ -57,8 +57,11 @@ body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
   }
   .key { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
-  /* The app always fills exactly what's visible, even with the keyboard up. */
-  .app { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--app-h, 100%); display: block; padding: 0; }
+  /* The app fills the whole screen. Only while the keyboard is up does it shrink to the
+     part that's still visible (measured by mobile.js), so the message box stays in view. */
+  .app { position: fixed; inset: 0; height: auto; display: block; padding: 0; }
+  body.kb .app { top: var(--vv-top, 0px); bottom: auto; height: var(--app-h, 100%); }
+  .wallpaper { inset: 0; min-height: 100lvh; }
   .views { position: absolute; inset: 0; }
 
   /* ---- tab bar ---- */
@@ -95,6 +98,7 @@ body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
   body.kb #view-messages.in-thread { padding-bottom: 8px; }
   #view-messages:not(.in-thread) .convo-panel { animation: listIn .45s var(--out) both; }
   .convo { padding: 10px; }
+  .convos:empty { display: none; }
   .search { margin: 0 14px 8px; }
   .back-btn { display: grid; width: 34px; height: 38px; margin-left: -4px; flex: none; }
   .back-btn svg { width: 24px; height: 24px; stroke-width: 2.4; color: var(--blue-2); }

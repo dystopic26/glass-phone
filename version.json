@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
-  "build": "1.4.0-bd3170ee01",
-  "notes": ""
+  "version": "1.4.0.1",
+  "build": "1.4.0.1-8d08a08f7f",
+  "notes": "Fits the screen properly on all iPhones, including Pro Max."
 }

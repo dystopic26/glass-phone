@@ -4,7 +4,7 @@
 // "main process". It talks to Twilio straight from the phone (Twilio's API allows
 // that), keeps settings on the phone, and keeps call recordings in the app's storage.
 (function () {
-  const VERSION = '1.4.0'; // filled in by scripts/build-web.js
+  const VERSION = '1.4.0.1'; // filled in by scripts/build-web.js
   const LABEL = 'Glass Phone (iPhone)'; // name for what setup creates in Twilio
   const MAX_CLIP_BYTES = 20 * 1024 * 1024;
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
