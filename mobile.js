@@ -6,7 +6,6 @@
   const phone = matchMedia('(max-width: 760px)');
   const root = document.documentElement;
   const body = document.body;
-  const homeApp = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
 
   // :active styles only work on iOS when the page listens for touches.
   document.addEventListener('touchstart', () => {}, { passive: true });
@@ -110,13 +109,7 @@
     if (!vv) return;
     root.style.setProperty('--app-h', vv.height + 'px');
     root.style.setProperty('--vv-top', vv.offsetTop + 'px');
-    const shown = Math.max(window.innerHeight, root.clientHeight);
-    const kb = shown - vv.height > 140 && typingIn(document.activeElement);
-    // Some iOS versions size a Home Screen app's page one status bar short of the screen,
-    // leaving an empty band at the bottom. Measure the shortfall and stretch over it.
-    const short = screen.height - shown;
-    const gap = homeApp && !kb && matchMedia('(orientation: portrait)').matches && short > 0 && short < 120 ? short : 0;
-    root.style.setProperty('--gap', gap + 'px');
+    const kb = Math.max(window.innerHeight, root.clientHeight) - vv.height > 140 && typingIn(document.activeElement);
     if (body.classList.contains('kb') !== kb) body.classList.toggle('kb', kb);
   }
   const queueFit = () => raf || (raf = requestAnimationFrame(fit));

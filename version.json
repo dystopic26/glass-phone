@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0.2",
-  "build": "1.4.0.2-7b0f4a6732",
-  "notes": "Fills the whole screen on iPhone, with no empty band at the bottom."
+  "version": "1.4.0.3",
+  "build": "1.4.0.3-79e851fe65",
+  "notes": "Fits the iPhone screen with no empty band at the bottom. If you still see the band, remove Glass Phone from your Home Screen and add it again."
 }
