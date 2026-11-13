@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0.1",
-  "build": "1.4.0.1-8d08a08f7f",
-  "notes": "Fits the screen properly on all iPhones, including Pro Max."
+  "version": "1.4.0.2",
+  "build": "1.4.0.2-7b0f4a6732",
+  "notes": "Fills the whole screen on iPhone, with no empty band at the bottom."
 }

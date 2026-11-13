@@ -59,14 +59,14 @@ body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
 
   /* The app fills the whole screen. Only while the keyboard is up does it shrink to the
      part that's still visible (measured by mobile.js), so the message box stays in view. */
-  .app { position: fixed; inset: 0; height: auto; display: block; padding: 0; }
+  .app { position: fixed; inset: 0; bottom: calc(-1 * var(--gap, 0px)); height: auto; display: block; padding: 0; }
   body.kb .app { top: var(--vv-top, 0px); bottom: auto; height: var(--app-h, 100%); }
-  .wallpaper { inset: 0; min-height: 100lvh; }
+  .wallpaper, .call-sheet, .lightbox { bottom: calc(-1 * var(--gap, 0px)); }
   .views { position: absolute; inset: 0; }
 
   /* ---- tab bar ---- */
   .sidebar {
-    position: fixed; z-index: 30; left: 12px; right: 12px; bottom: var(--bar-gap);
+    position: fixed; z-index: 30; left: 12px; right: 12px; bottom: calc(var(--bar-gap) - var(--gap, 0px));
     width: auto; height: var(--tabbar); padding: 6px; border-radius: 32px;
     flex-direction: row; justify-content: space-between; align-items: center;
     transition: transform .5s var(--spring-soft), opacity .3s var(--out);
@@ -199,7 +199,7 @@ body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
     to { opacity: 0; transform: translateY(-18px) scale(.96); max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: -8px; border-width: 0; }
   }
 
-  .update-pill { bottom: calc(var(--tabbar) + var(--bar-gap) + 12px); max-width: calc(100vw - 24px); }
+  .update-pill { bottom: calc(var(--tabbar) + var(--bar-gap) + 12px - var(--gap, 0px)); max-width: calc(100vw - 24px); }
   .lightbox img { max-width: 94vw; max-height: 80vh; }
 
   @keyframes chatIn { from { opacity: 0; transform: translateX(40px); } }

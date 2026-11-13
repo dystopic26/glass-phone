@@ -6,6 +6,7 @@
   const phone = matchMedia('(max-width: 760px)');
   const root = document.documentElement;
   const body = document.body;
+  const homeApp = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
 
   // :active styles only work on iOS when the page listens for touches.
   document.addEventListener('touchstart', () => {}, { passive: true });
@@ -98,7 +99,7 @@
   $('#dropzone div').innerHTML = '<strong>Add an MP3 or WAV</strong><br><span>Tap to choose from Files · up to 20 MB</span>';
   $$('.notes li').forEach((li) => /Shortcuts/.test(li.textContent) && li.remove());
   $('.rec-side .stem-list').after(h('p', { class: 'hint small web-note' }, 'Recordings are kept in this app. Tap the share button on one to save its three tracks to Files or send them.'));
-  if (!('setSinkId' in HTMLMediaElement.prototype)) $('#speaker-select').closest('.field').hidden = true; // iPhone picks the speaker itself
+  if (TOUCH || !('setSinkId' in HTMLMediaElement.prototype)) $('#speaker-select').closest('.field').hidden = true; // iPhone picks the speaker itself
   $('#audio-hint').textContent = 'Used for calls you make in the app.';
 
   // ---- keep the layout above the on-screen keyboard ----
@@ -109,7 +110,13 @@
     if (!vv) return;
     root.style.setProperty('--app-h', vv.height + 'px');
     root.style.setProperty('--vv-top', vv.offsetTop + 'px');
-    const kb = Math.max(window.innerHeight, root.clientHeight) - vv.height > 140 && typingIn(document.activeElement);
+    const shown = Math.max(window.innerHeight, root.clientHeight);
+    const kb = shown - vv.height > 140 && typingIn(document.activeElement);
+    // Some iOS versions size a Home Screen app's page one status bar short of the screen,
+    // leaving an empty band at the bottom. Measure the shortfall and stretch over it.
+    const short = screen.height - shown;
+    const gap = homeApp && !kb && matchMedia('(orientation: portrait)').matches && short > 0 && short < 120 ? short : 0;
+    root.style.setProperty('--gap', gap + 'px');
     if (body.classList.contains('kb') !== kb) body.classList.toggle('kb', kb);
   }
   const queueFit = () => raf || (raf = requestAnimationFrame(fit));
