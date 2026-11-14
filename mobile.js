@@ -10,9 +10,6 @@
   // :active styles only work on iOS when the page listens for touches.
   document.addEventListener('touchstart', () => {}, { passive: true });
 
-  // ---- tab bar labels ----
-  const LABELS = { messages: 'Messages', phone: 'Phone', drops: 'Audio', recordings: 'Recordings', settings: 'Settings' };
-  $$('.nav-btn').forEach((b) => b.append(h('span', { class: 'lbl' }, LABELS[b.dataset.view] || '')));
 
   // ---- chats: back button, swipe from the left edge to go back ----
   const msgView = $('#view-messages');

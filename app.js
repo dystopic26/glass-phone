@@ -30,6 +30,9 @@ const S = {
   callLog: null, // the live call in progress, for Recents
   dropFetching: new Set(),
   update: null,
+  drafts: loadJSON('drafts', {}), // number -> unsent text
+  account: null, // { name, type, balance, currency }
+  editingAccount: false,
 };
 
 function loadJSON(key, fallback) {
@@ -172,7 +175,8 @@ async function refreshState(next) {
   $('#settings-dot').hidden = ready;
   $('#setup-chip').textContent = ready ? 'Ready' : S.state.hasToken ? 'Setup not finished' : 'Not set up';
   $('#setup-chip').classList.toggle('ready', ready);
-  $('#welcome-hint').hidden = S.state.hasToken;
+  renderSidebar();
+  renderConnect();
   renderPeople();
   renderClips();
   renderConvos();
@@ -258,6 +262,7 @@ function updateBadges() {
   if (total && !b.hidden && b.textContent !== label) Motion.restart(b, 'bump');
   b.hidden = !total;
   b.textContent = label;
+  $('#mark-read').hidden = !total;
   api.setBadge({ count: total });
 }
 
@@ -303,8 +308,10 @@ function renderConvos() {
 }
 
 function openConvo(number) {
+  saveDraft();
   S.active = number;
   S.composingNew = false;
+  ta.value = S.drafts[number] || '';
   markRead(number, false);
   renderConvos();
   renderThread();
@@ -339,17 +346,29 @@ function renderThread() {
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
   const nodes = [];
   let lastDay = '';
+  let lastAt = 0;
   msgs.forEach((m, i) => {
     const day = new Date(m.date).toDateString();
+    const at = Date.parse(m.date) || 0;
     if (day !== lastDay) {
       lastDay = day;
       nodes.push(h('div', { class: 'day' }, when(m.date)));
+    } else if (at - lastAt > 60 * 60e3) {
+      nodes.push(h('div', { class: 'day gap' }, new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })));
     }
+    lastAt = at;
     const out = m.direction.startsWith('outbound');
     const failed = ['failed', 'undelivered'].includes(m.status);
     const media = m.numMedia > 0 || S.localMedia[m.sid] ? mediaNode(m) : null;
     const cls = `bubble ${out ? 'out' : 'in'}${failed ? ' failed' : ''}${media && !m.body ? ' only-media' : ''}${S.seen.has(m.sid) ? '' : ' new'}`;
-    nodes.push(h('div', { class: cls, title: new Date(m.date).toLocaleString() }, media, m.body ? h('div', { class: 'text' }, m.body) : null));
+    nodes.push(
+      h(
+        'div',
+        { class: cls, title: new Date(m.date).toLocaleString() + (m.body && !TOUCH ? ' · double-click to copy' : ''), ondblclick: () => m.body && copyText(m.body, 'Message copied.') },
+        media,
+        m.body ? h('div', { class: 'text' }, ...linkify(m.body)) : null
+      )
+    );
     const isLastOut = out && !msgs.slice(i + 1).some((x) => x.direction.startsWith('outbound'));
     if (failed) {
       const canRetry = out && m.body && !m.numMedia && !S.localMedia[m.sid];
@@ -467,6 +486,10 @@ document.addEventListener('keydown', (e) => {
     show('messages');
     return $('#new-msg').click();
   }
+  if (mod && e.key === '\\') {
+    e.preventDefault();
+    return $('#side-collapse').click();
+  }
   if (mod && k === 'f') {
     e.preventDefault();
     show('messages');
@@ -561,8 +584,11 @@ api.onMmsProgress(({ label }) => {
 });
 
 $('#new-msg').addEventListener('click', () => {
+  saveDraft();
   S.composingNew = true;
   S.active = null;
+  ta.value = '';
+  sizeComposer();
   $('#to-input').value = '';
   renderConvos();
   renderThread();
@@ -617,8 +643,13 @@ function sizeComposer() {
   ta.style.height = 'auto';
   if (ta.scrollHeight > 0) ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
   $('#send-btn').disabled = !ta.value.trim() && !S.attachment;
+  renderSegCount();
 }
-ta.addEventListener('input', sizeComposer);
+ta.addEventListener('input', () => {
+  sizeComposer();
+  clearTimeout(ta._draft);
+  ta._draft = setTimeout(saveDraft, 400);
+});
 ta.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -639,6 +670,8 @@ $('#composer').addEventListener('submit', async (e) => {
     const m = await rpc(api.sendSms, { to, body });
     S.messages.push(m);
     ta.value = '';
+    delete S.drafts[to];
+    saveJSON('drafts', S.drafts);
     sizeComposer();
     S.composingNew = false;
     S.active = to;
@@ -688,8 +721,15 @@ function peopleList() {
   return [...nums].sort((a, b) => (hasName(b) - hasName(a)) || nameFor(a).localeCompare(nameFor(b)));
 }
 
+const peopleQuery = () => ($('#people-search') ? $('#people-search').value.trim().toLowerCase() : '');
+const matchesPeople = (num) => {
+  const q = peopleQuery();
+  return !q || nameFor(num).toLowerCase().includes(q) || num.includes(q.replace(/\D/g, '') || '~');
+};
+
 function renderPeople() {
-  const list = peopleList();
+  const list = peopleList().filter(matchesPeople);
+  const lastText = new Map(conversations().map((c) => [c.number, c.last]));
   Motion.list(
     $('#people'),
     list.map((num) =>
@@ -697,7 +737,13 @@ function renderPeople() {
         'li',
         { class: 'person', 'data-key': num, onclick: () => { $('#dial-number').value = fmt(num); updateDialName(); } },
         avatar(h('div', { class: 'avatar' }), num),
-        h('div', { class: 'meta' }, h('div', { class: 'name' }, nameFor(num)), hasName(num) ? h('div', { class: 'num' }, fmt(num)) : null),
+        h(
+          'div',
+          { class: 'meta' },
+          h('div', { class: 'name' }, nameFor(num)),
+          hasName(num) ? h('div', { class: 'num' }, fmt(num)) : null,
+          lastText.get(num) ? h('div', { class: 'snip' }, (isInbound(lastText.get(num)) ? '' : 'You: ') + (lastText.get(num).body || 'Picture') + ' · ' + when(lastText.get(num).date)) : null
+        ),
         h(
           'div',
           { class: 'acts' },
@@ -708,7 +754,9 @@ function renderPeople() {
     )
   );
   $('#people-empty').hidden = list.length > 0 || $('#people').hidden;
+  $('#people-empty').textContent = peopleQuery() ? 'No one matches that search.' : 'People you text or name show up here.';
   renderRecents();
+  renderCallStats();
   $('#people-list').replaceChildren(...Object.values(contacts()).map((n) => h('option', { value: n })));
 }
 
@@ -731,15 +779,18 @@ const CALL_OUTCOME = {
 };
 
 function addCall(entry) {
-  S.calls = [entry, ...S.calls].slice(0, 100);
+  S.calls = [entry, ...S.calls].slice(0, 200);
   saveJSON('callHistory', S.calls);
   renderRecents();
+  renderCallStats();
 }
 
 function renderRecents() {
+  const calls = S.calls.filter((c) => matchesPeople(c.number));
+  $('#clear-recents').hidden = !S.calls.length || $('#recents').hidden;
   Motion.list(
     $('#recents'),
-    S.calls.map((c) => {
+    calls.map((c) => {
       const ok = c.outcome === 'answered' || c.outcome === 'completed';
       const detail = (CALL_OUTCOME[c.outcome] || c.outcome) + (ok && c.duration ? ` · ${mmss(c.duration)}` : '');
       return h(
@@ -757,7 +808,8 @@ function renderRecents() {
       );
     })
   );
-  $('#recents-empty').hidden = S.calls.length > 0 || $('#recents').hidden;
+  $('#recents-empty').hidden = calls.length > 0 || $('#recents').hidden;
+  $('#recents-empty').textContent = S.calls.length ? 'No calls match that search.' : 'Calls you make show up here.';
 }
 
 function sidePanel(tab) {
@@ -785,15 +837,33 @@ function updateDialName() {
   const n = resolve(dial.value);
   $('#dial-name').innerHTML = n && hasName(n) ? '' : '&nbsp;';
   if (n && hasName(n)) $('#dial-name').textContent = contacts()[n];
+  $('#dial-msg').disabled = !n;
+  $('#dial-drop').disabled = !n;
+}
+
+// (555) 123-4567 as you type, for US numbers.
+function formatTyping(v) {
+  if (/[^\d\s()+-]/.test(v) || v.trim().startsWith('+') && !v.trim().startsWith('+1')) return v;
+  let d = v.replace(/\D/g, '');
+  const one = d.length === 11 && d[0] === '1';
+  if (one) d = d.slice(1);
+  if (d.length < 4 || d.length > 10) return v;
+  const out = d.length <= 6 ? `(${d.slice(0, 3)}) ${d.slice(3)}` : `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  return (one ? '+1 ' : '') + out;
 }
 buildKeypad($('#keypad'), (d) => {
-  dial.value += d;
+  dial.value = formatTyping(dial.value + d);
   updateDialName();
 });
-dial.addEventListener('input', updateDialName);
+dial.addEventListener('input', (e) => {
+  if (e.inputType && e.inputType.startsWith('insert') && dial.selectionStart === dial.value.length) dial.value = formatTyping(dial.value);
+  updateDialName();
+});
 dial.addEventListener('keydown', (e) => e.key === 'Enter' && startCall(dial.value));
 $('#dial-back').addEventListener('click', () => {
-  dial.value = dial.value.slice(0, -1);
+  const d = dial.value.replace(/\D/g, '');
+  dial.value = /^[\d\s()+-]*$/.test(dial.value) ? formatTyping(d.slice(0, -1)) : dial.value.slice(0, -1);
+  if (!d.slice(0, -1)) dial.value = '';
   updateDialName();
 });
 $('#dial-call').addEventListener('click', () => startCall(dial.value));
@@ -1304,6 +1374,8 @@ const recWhen = (d) => new Date(d).toLocaleString([], { month: 'short', day: 'nu
 
 function renderRecordings() {
   const list = S.recordings;
+  $('#rec-count').hidden = !list.length;
+  $('#rec-count').textContent = list.length;
   const mac = S.state && S.state.platform === 'darwin';
   Motion.list(
     $('#recs'),
@@ -1595,6 +1667,7 @@ function fillSettings() {
   $('#set-from').value = fmt(S.state.fromNumber);
   $('#set-token').value = '';
   $('#set-token').placeholder = S.state.hasToken ? 'Saved (leave blank to keep)' : 'Paste your Auth Token';
+  connectProgress();
 }
 
 const stepEls = {};
@@ -1624,14 +1697,17 @@ $('#settings-form').addEventListener('submit', async (e) => {
     btn.textContent = 'Setting up…';
     await refreshState(await rpc(api.runSetup));
     S.device = null;
+    S.editingAccount = false;
     toast('All set! You can text and call now.', 'ok');
     loadMessages(false);
+    loadAccount();
+    renderConnect();
   } catch (err) {
     toast(err.message, 'err');
     await refreshState().catch(() => {});
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Save & set up';
+    connectProgress();
   }
 });
 
@@ -1675,12 +1751,18 @@ document.addEventListener('click', (e) => {
   saveJSON('seenVersion', S.state.version);
   if (S.state.platform !== 'darwin') $$('[title*="⌘"]').forEach((el) => (el.title = el.title.replace(/⌘/g, 'Ctrl+')));
   if (S.state.platform !== 'darwin') $$('.notes li').forEach((li) => (li.innerHTML = li.innerHTML.replace(/⌘/g, 'Ctrl+')));
+  if (S.state.platform !== 'darwin') $$('kbd').forEach((k) => (k.textContent = k.textContent.replace('⌘', 'Ctrl ')));
   rpc(api.dropPending)
     .then((sids) => sids.forEach(fetchDropRecording))
     .catch(() => {});
   sizeComposer();
+  applySide();
   if (!S.state.hasToken) show('settings');
-  else loadMessages(false);
+  else {
+    loadMessages(false);
+    loadAccount();
+  }
+  setInterval(loadAccount, 15 * 60e3);
   // New texts: every 8 seconds while the window is in front, every 20 seconds in the background.
   (async function poll() {
     for (;;) {
@@ -1695,3 +1777,373 @@ document.addEventListener('click', (e) => {
     if (isViewing(S.active)) markRead(S.active);
   });
 })();
+
+// ================= 1.4 additions =================
+
+// ---------- small helpers ----------
+
+function copyText(text, msg = 'Copied.') {
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(() => toast(msg, 'ok'))
+    .catch(() => toast('Couldn’t copy that.', 'err'));
+}
+
+// Turns web links in a message into clickable links (they open in your browser).
+function linkify(text) {
+  const out = [];
+  const re = /\b(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"’”])|\b(www\.[^\s<]+[^\s<.,;:!?)\]'"’”])/gi;
+  let last = 0;
+  for (let m; (m = re.exec(text)); ) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const url = m[1] || 'https://' + m[2];
+    out.push(h('a', { class: 'lnk', href: '#', title: url, onclick: (e) => { e.preventDefault(); e.stopPropagation(); rpc(api.openLink, { url }).catch((err) => toast(err.message, 'err')); } }, m[0]));
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+// ---------- drafts ----------
+
+function saveDraft() {
+  const num = S.active;
+  if (!num || S.composingNew) return;
+  const v = ta.value;
+  if (v.trim()) S.drafts[num] = v;
+  else delete S.drafts[num];
+  saveJSON('drafts', S.drafts);
+}
+
+// ---------- text length: how many texts this message becomes ----------
+
+const GSM = new Set('@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà');
+const GSM_EXT = new Set('^{}\\[~]|€');
+
+function smsParts(text) {
+  let gsm = true;
+  let units = 0;
+  for (const ch of text) {
+    if (GSM.has(ch)) units += 1;
+    else if (GSM_EXT.has(ch)) units += 2;
+    else gsm = false;
+  }
+  if (!gsm) units = text.length; // UTF-16 units
+  const single = gsm ? 160 : 70;
+  const multi = gsm ? 153 : 67;
+  return { gsm, units, single, parts: units <= single ? 1 : Math.ceil(units / multi) };
+}
+
+function renderSegCount() {
+  const el = $('#seg-count');
+  const t = ta.value;
+  if (!t || S.attachment) return (el.hidden = true);
+  const p = smsParts(t);
+  const show = p.parts > 1 || p.units >= p.single - 40;
+  el.hidden = !show;
+  if (!show) return;
+  el.textContent = p.parts > 1 ? `${p.parts} texts` : `${p.units}/${p.single}`;
+  el.classList.toggle('warn', p.parts > 1);
+  el.title = (p.gsm ? '' : 'Emoji and some symbols fit 70 characters per text instead of 160. ') + (p.parts > 1 ? `This sends as ${p.parts} texts, each billed separately.` : '');
+}
+
+// ---------- mark all read, empty-state buttons ----------
+
+$('#mark-read').addEventListener('click', () => {
+  const now = Date.now();
+  S.lastRead = S.lastRead || {};
+  for (const c of conversations()) S.lastRead[c.number] = Math.max(now, Date.parse(c.last.date) || 0);
+  saveJSON('lastRead', S.lastRead);
+  updateBadges();
+  renderConvos();
+});
+$('#empty-new-msg').addEventListener('click', () => $('#new-msg').click());
+$('#thread-empty-new').addEventListener('click', () => $('#new-msg').click());
+
+// ---------- sidebar ----------
+
+const phoneLayout = () => matchMedia('(max-width: 760px)').matches;
+
+function applySide() {
+  if (phoneLayout()) {
+    document.body.classList.remove('side-mini', 'side-forced');
+    return;
+  }
+  const forced = innerWidth < 1100;
+  const mini = forced || loadJSON('sideMini', false);
+  const changed = document.body.classList.contains('side-mini') !== mini;
+  document.body.classList.toggle('side-mini', mini);
+  document.body.classList.toggle('side-forced', forced);
+  $('#side-collapse').title = mini ? 'Expand sidebar' : 'Collapse sidebar';
+  if (changed) setTimeout(() => dispatchEvent(new Event('resize')), 470); // re-seat the tab indicator
+}
+let sideTimer;
+addEventListener('resize', (e) => {
+  if (!e.isTrusted) return;
+  clearTimeout(sideTimer);
+  sideTimer = setTimeout(applySide, 120);
+});
+$('#side-collapse').addEventListener('click', () => {
+  saveJSON('sideMini', !document.body.classList.contains('side-mini'));
+  applySide();
+});
+$('#side-new-msg').addEventListener('click', () => {
+  show('messages');
+  $('#new-msg').click();
+});
+$('#side-dial').addEventListener('click', () => {
+  show('phone');
+  if (typeof phoneTab === 'function') phoneTab('keypad');
+});
+$('#my-number').addEventListener('click', () => S.state && S.state.fromNumber && copyText(S.state.fromNumber, 'Your number is copied.'));
+
+function renderSidebar() {
+  const st = S.state;
+  $('#my-number').textContent = st.fromNumber ? fmt(st.fromNumber) : 'Not connected';
+  const line = $('#status-line');
+  const offline = !navigator.onLine;
+  const [cls, text] = offline ? ['off', 'Offline'] : st.callingReady ? ['ok', 'Connected'] : st.hasToken ? ['', 'Finish setup'] : ['', 'Not connected'];
+  line.className = 'status-line ' + cls;
+  $('span', line).textContent = text;
+  line.title = offline ? 'No internet connection. Texts and calls will work again once you’re back online.' : text;
+  renderAccount();
+}
+
+const money = (n, cur) => {
+  try {
+    return new Intl.NumberFormat([], { style: 'currency', currency: cur || 'USD' }).format(n);
+  } catch {
+    return (cur ? cur + ' ' : '$') + n.toFixed(2);
+  }
+};
+
+async function loadAccount() {
+  if (!S.state || !S.state.hasToken || !navigator.onLine) return;
+  try {
+    S.account = await rpc(api.accountInfo);
+  } catch {
+    return;
+  }
+  renderAccount();
+  renderConnect();
+}
+
+function renderAccount() {
+  const a = S.account;
+  const card = $('#acct-card');
+  card.hidden = !a || !S.state.hasToken;
+  if (!a) return;
+  $('#acct-balance').textContent = a.balance == null ? '–' : money(a.balance, a.currency);
+  $('#acct-type').textContent = a.type === 'Trial' ? 'Trial account' : 'Paid account';
+  card.classList.toggle('low', a.balance != null && a.balance < 5);
+  card.title = a.balance != null && a.balance < 5 ? 'Your balance is getting low. Texts and calls stop when it runs out.' : '';
+}
+
+// ---------- online / offline ----------
+
+addEventListener('offline', () => {
+  renderSidebar();
+  toast('You’re offline. Texts and calls will work again once you reconnect.', 'err');
+});
+addEventListener('online', () => {
+  renderSidebar();
+  toast('Back online.', 'ok');
+  loadMessages();
+  loadAccount();
+});
+
+// ---------- Phone page: stats, search, quick actions ----------
+
+function renderCallStats() {
+  const startToday = new Date(new Date().toDateString()).getTime();
+  const weekAgo = Date.now() - 7 * 864e5;
+  $('#stat-today').textContent = S.calls.filter((c) => c.at >= startToday).length;
+  const talk = S.calls.filter((c) => c.at >= weekAgo && c.kind === 'live').reduce((n, c) => n + (c.duration || 0), 0);
+  $('#stat-talk').textContent = talk >= 3600 ? `${Math.floor(talk / 3600)}h ${Math.floor((talk % 3600) / 60)}m` : mmss(talk);
+  $('#stat-people').textContent = peopleList().length;
+}
+
+$('#people-search').addEventListener('input', renderPeople);
+$('#clear-recents').addEventListener('click', () => {
+  if (!confirm('Clear your recent calls? This only clears the list in Glass Phone.')) return;
+  S.calls = [];
+  saveJSON('callHistory', S.calls);
+  renderRecents();
+  renderCallStats();
+});
+$('#tab-recents').addEventListener('click', () => ($('#clear-recents').hidden = !S.calls.length));
+$('#tab-people').addEventListener('click', () => ($('#clear-recents').hidden = true));
+
+$('#dial-msg').addEventListener('click', () => {
+  const n = resolve(dial.value);
+  if (!n) return;
+  show('messages');
+  if (conversations().some((c) => c.number === n)) return openConvo(n);
+  $('#new-msg').click();
+  $('#to-input').value = hasName(n) ? contacts()[n] : fmt(n);
+  if (!TOUCH) ta.focus();
+});
+$('#dial-drop').addEventListener('click', () => {
+  const n = resolve(dial.value);
+  if (!n) return;
+  $('#drop-to').value = hasName(n) ? contacts()[n] : fmt(n);
+  show('drops');
+});
+$('#dial-paste').addEventListener('click', async () => {
+  try {
+    const text = await rpc(api.readClipboard);
+    const m = /\+?\d[\d\s().-]{6,}\d/.exec(text || '');
+    const n = m && normalize(m[0]);
+    if (!n) return toast('There’s no phone number on the clipboard.');
+    dial.value = n.startsWith('+1') ? formatTyping(n.slice(2)) : n;
+    updateDialName();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+});
+
+// ---------- Settings: Connect Twilio ----------
+// Twilio doesn't offer "Sign in with Twilio" for personal apps, so this gets as close as
+// it can: open the right Twilio page, pick up the Account SID and Auth Token as you copy
+// them, list your numbers to choose from, and set everything up with one button.
+
+const SID_RE = /\bAC[0-9a-f]{32}\b/i;
+const TOKEN_RE = /(?<![A-Za-z0-9])[0-9a-f]{32}(?![A-Za-z0-9])/;
+let numbersFor = '';
+
+function connectProgress() {
+  const sid = SID_RE.test($('#set-sid').value.trim());
+  const token = !!$('#set-token').value.trim() || (S.state && S.state.hasToken);
+  const number = !!normalize($('#set-from').value);
+  const steps = $$('.connect-steps li');
+  steps[0].classList.toggle('done', sid || token);
+  steps[1].classList.toggle('done', sid && token);
+  steps[2].classList.toggle('done', sid && token && number);
+  const btn = $('#settings-save');
+  if (!btn.disabled) btn.textContent = S.state && S.state.callingReady ? 'Save & set up' : 'Connect & set up';
+  btn.classList.toggle('ready', sid && token && number && !(S.state && S.state.callingReady && !S.editingAccount));
+  if (sid && token) loadNumbers();
+}
+
+function takeCredentials(text, quiet) {
+  if (!text) return false;
+  let got = [];
+  const sid = SID_RE.exec(text);
+  const token = TOKEN_RE.exec(text.replace(SID_RE, ''));
+  if (sid && sid[0] !== $('#set-sid').value.trim()) {
+    $('#set-sid').value = sid[0];
+    got.push('Account SID');
+  }
+  if (token && token[0] !== $('#set-token').value.trim()) {
+    $('#set-token').value = token[0];
+    got.push('Auth Token');
+  }
+  if (got.length) {
+    toast(`Got your ${got.join(' and ')}.`, 'ok');
+    connectProgress();
+  } else if (!quiet) {
+    toast('Copy your Account SID or Auth Token in Twilio first, then tap Paste.');
+  }
+  return got.length > 0;
+}
+
+$('#connect-open').addEventListener('click', () => {
+  api.openExternal({ url: 'https://console.twilio.com/' });
+  toast('In Twilio, copy your Account SID, then your Auth Token. Glass Phone fills them in.');
+});
+$('#connect-paste').addEventListener('click', async () => {
+  try {
+    takeCredentials(await rpc(api.readClipboard), false);
+  } catch {
+    toast('Couldn’t read the clipboard. Paste into the boxes below instead.', 'err');
+  }
+});
+['#set-sid', '#set-token', '#set-from'].forEach((sel) => $(sel).addEventListener('input', connectProgress));
+$('#set-sid').addEventListener('paste', (e) => {
+  const t = e.clipboardData && e.clipboardData.getData('text');
+  if (t && SID_RE.test(t) && TOKEN_RE.test(t.replace(SID_RE, ''))) {
+    e.preventDefault();
+    takeCredentials(t, true);
+  }
+});
+
+// Desktop: watch the clipboard while you're on this screen and not connected yet.
+let lastClip = '';
+setInterval(async () => {
+  if (onIOS() || !S.state || !$('#view-settings').classList.contains('active') || !document.hasFocus()) return;
+  if (S.state.callingReady && !S.editingAccount) return;
+  try {
+    const t = await rpc(api.readClipboard);
+    if (t && t !== lastClip) {
+      lastClip = t;
+      takeCredentials(t, true);
+    }
+  } catch {}
+}, 1200);
+
+async function loadNumbers() {
+  const sid = $('#set-sid').value.trim();
+  const token = $('#set-token').value.trim();
+  const key = sid + ':' + token;
+  if (key === numbersFor) return;
+  numbersFor = key;
+  const hint = $('#numbers-hint');
+  hint.textContent = 'Looking up your numbers…';
+  let list;
+  try {
+    list = await rpc(api.listNumbers, { accountSid: sid, authToken: token });
+  } catch (e) {
+    numbersFor = '';
+    hint.textContent = /rejected/.test(e.message) ? 'Twilio didn’t accept that Account SID and Auth Token. Check them.' : e.message;
+    return;
+  }
+  if (key !== numbersFor) return;
+  const pick = $('#set-from-pick');
+  if (!list.length) {
+    pick.hidden = true;
+    $('#set-from').hidden = false;
+    hint.innerHTML = 'This account has no phone numbers yet. <a href="#" data-ext="https://console.twilio.com/us1/develop/phone-numbers/manage/search">Buy one in Twilio</a>, then come back.';
+    return;
+  }
+  const caps = (n) => [n.voice && 'Voice', n.sms && 'SMS', n.mms && 'MMS'].filter(Boolean).join(', ');
+  pick.replaceChildren(
+    ...list.map((n) => h('option', { value: n.number }, `${fmt(n.number)}${n.name && n.name !== n.number && !/^\(\d{3}\)/.test(n.name) ? ' · ' + n.name : ''} — ${caps(n) || 'no texting or calling'}`)),
+    h('option', { value: '' }, 'Type a number instead…')
+  );
+  const current = normalize($('#set-from').value);
+  const best = list.find((n) => n.number === current) || list.find((n) => n.voice && n.sms) || list[0];
+  pick.value = best.number;
+  $('#set-from').value = fmt(best.number);
+  pick.hidden = false;
+  $('#set-from').hidden = true;
+  hint.textContent = list.length === 1 ? 'Found your number.' : `Found ${list.length} numbers. Pick the one to use.`;
+  connectProgress();
+}
+$('#set-from-pick').addEventListener('change', (e) => {
+  const v = e.target.value;
+  $('#set-from').hidden = !!v;
+  if (v) $('#set-from').value = fmt(v);
+  else {
+    $('#set-from').value = '';
+    $('#set-from').focus();
+  }
+  connectProgress();
+});
+
+function renderConnect() {
+  if (!S.state) return;
+  const connected = S.state.callingReady && !S.editingAccount;
+  $('#connected').hidden = !connected;
+  $('#connect').classList.toggle('tucked', connected);
+  $('#settings-form').classList.toggle('tucked', connected);
+  $('#setup-steps').hidden = connected;
+  if (!connected) return;
+  const a = S.account;
+  $('#conn-name').textContent = a && a.name ? a.name : 'Connected to Twilio';
+  $('#conn-detail').textContent = [fmt(S.state.fromNumber), a && a.type ? a.type + ' account' : null, a && a.balance != null ? money(a.balance, a.currency) + ' balance' : null].filter(Boolean).join(' · ');
+}
+$('#conn-edit').addEventListener('click', () => {
+  S.editingAccount = true;
+  renderConnect();
+  connectProgress();
+  $('#set-sid').focus();
+});

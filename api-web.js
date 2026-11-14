@@ -4,7 +4,7 @@
 // "main process". It talks to Twilio straight from the phone (Twilio's API allows
 // that), keeps settings on the phone, and keeps call recordings in the app's storage.
 (function () {
-  const VERSION = '1.4.0.3'; // filled in by scripts/build-web.js
+  const VERSION = '1.4.0'; // filled in by scripts/build-web.js
   const LABEL = 'Glass Phone (iPhone)'; // name for what setup creates in Twilio
   const MAX_CLIP_BYTES = 20 * 1024 * 1024;
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -173,6 +173,20 @@
 
   const tw = {
     verifyAccount: (c) => c.request('GET', `${c.API}.json`),
+    async listNumbers(c) {
+      const r = await c.request('GET', `${c.API}/IncomingPhoneNumbers.json`, { PageSize: 100 });
+      return (r.incoming_phone_numbers || []).map((n) => ({
+        number: n.phone_number,
+        name: n.friendly_name,
+        sms: !!(n.capabilities && n.capabilities.sms),
+        mms: !!(n.capabilities && n.capabilities.mms),
+        voice: !!(n.capabilities && n.capabilities.voice),
+      }));
+    },
+    async accountInfo(c) {
+      const [acct, bal] = await Promise.all([c.request('GET', `${c.API}.json`), c.request('GET', `${c.API}/Balance.json`).catch(() => null)]);
+      return { name: acct.friendly_name || '', type: acct.type || '', status: acct.status || '', balance: bal ? Number(bal.balance) : null, currency: bal ? bal.currency : null };
+    },
     async findNumber(c, phoneNumber) {
       const r = await c.request('GET', `${c.API}/IncomingPhoneNumbers.json`, { PhoneNumber: phoneNumber });
       return (r.incoming_phone_numbers || [])[0] || null;
@@ -1102,6 +1116,19 @@
     installUpdate: handle(installUpdate),
     onUpdateState: on('update:state'),
 
+    listNumbers: handle(({ accountSid, authToken }) => {
+      accountSid = String(accountSid || '').trim();
+      authToken = String(authToken || '').trim() || getSecret('authToken');
+      if (!/^AC[0-9a-fA-F]{32}$/.test(accountSid) || !authToken) return [];
+      return tw.listNumbers(createClient(accountSid, authToken));
+    }),
+    accountInfo: handle(() => tw.accountInfo(client())),
+    // iPhone asks before letting the app read the clipboard, so this only runs from a tap.
+    readClipboard: handle(async () => (navigator.clipboard && navigator.clipboard.readText ? (await navigator.clipboard.readText()).slice(0, 4000) : '')),
+    openLink: handle(({ url }) => {
+      const u = new URL(String(url));
+      if (u.protocol === 'https:' || u.protocol === 'http:') window.open(u.toString(), '_blank', 'noopener');
+    }),
     openExternal: handle(({ url }) => {
       const u = new URL(String(url));
       const ok = ['twilio.com', 'github.com'].some((d) => u.hostname === d || u.hostname.endsWith('.' + d));

@@ -17,9 +17,9 @@
         content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
                  connect-src 'self' https: wss://*.twilio.com; media-src 'self' blob: data: https:; worker-src 'self'; manifest-src 'self'">
   <title>Glass Phone</title>
-  <link rel="stylesheet" href="styles.css?v=1.4.0.3">
-  <link rel="stylesheet" href="motion.css?v=1.4.0.3">
-  <link rel="stylesheet" href="mobile.css?v=1.4.0.3">
+  <link rel="stylesheet" href="styles.css?v=1.4.0">
+  <link rel="stylesheet" href="motion.css?v=1.4.0">
+  <link rel="stylesheet" href="mobile.css?v=1.4.0">
 </head>
 <body>
   <div class="wallpaper" aria-hidden="true">
@@ -30,25 +30,56 @@
   <div class="app">
     <!-- Sidebar -->
     <nav class="sidebar glass" aria-label="Sections">
+      <div class="brand">
+        <img class="brand-icon" src="icon.png" alt="">
+        <div class="brand-text">
+          <b>Glass Phone</b>
+          <button class="my-number" id="my-number" title="Your Twilio number. Click to copy">Not connected</button>
+        </div>
+      </div>
       <div class="nav-top">
         <button class="nav-btn active" data-view="messages" title="Messages (⌘1)" aria-label="Messages">
           <svg viewBox="0 0 24 24"><path d="M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.13 4.17 2.94 5.54-.13 1.34-.7 2.6-1.66 3.55 2.1-.02 3.88-.8 5.02-1.66.86.2 1.76.32 2.7.32 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5Z"/></svg>
+          <span class="lbl">Messages</span><kbd>⌘1</kbd>
           <span class="badge" id="msg-badge" hidden></span>
         </button>
         <button class="nav-btn" data-view="phone" title="Phone (⌘2)" aria-label="Phone">
           <svg viewBox="0 0 24 24"><path d="M6.6 3.2 8.9 3a1 1 0 0 1 1 .63l1.3 3.2a1 1 0 0 1-.27 1.13L9.2 9.5a11.6 11.6 0 0 0 5.3 5.3l1.54-1.74a1 1 0 0 1 1.13-.27l3.2 1.3a1 1 0 0 1 .63 1l-.2 2.3A2.3 2.3 0 0 1 18.5 19.5 14.5 14.5 0 0 1 4.5 5.5a2.3 2.3 0 0 1 2.1-2.3Z"/></svg>
+          <span class="lbl">Phone</span><kbd>⌘2</kbd>
         </button>
         <button class="nav-btn" data-view="drops" title="Audio calls (⌘3)" aria-label="Audio calls">
           <svg viewBox="0 0 24 24"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10.5v3" stroke-linecap="round"/></svg>
+          <span class="lbl">Audio</span><kbd>⌘3</kbd>
         </button>
         <button class="nav-btn" data-view="recordings" title="Recordings (⌘4)" aria-label="Recordings">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg>
+          <span class="lbl">Recordings</span><kbd>⌘4</kbd>
+          <span class="count" id="rec-count" hidden></span>
         </button>
       </div>
-      <button class="nav-btn" data-view="settings" title="Settings (⌘5)" aria-label="Settings">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" stroke-linecap="round"/></svg>
-        <span class="dot" id="settings-dot" hidden></span>
-      </button>
+      <div class="side-actions">
+        <button class="side-act" id="side-new-msg" title="New message (⌘N)">
+          <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg><span>New message</span>
+        </button>
+        <button class="side-act" id="side-dial" title="Open the keypad">
+          <svg viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="6" cy="5" r="1.6"/><circle cx="12" cy="5" r="1.6"/><circle cx="18" cy="5" r="1.6"/><circle cx="6" cy="11" r="1.6"/><circle cx="12" cy="11" r="1.6"/><circle cx="18" cy="11" r="1.6"/><circle cx="6" cy="17" r="1.6"/><circle cx="12" cy="17" r="1.6"/><circle cx="18" cy="17" r="1.6"/></g></svg><span>Keypad</span>
+        </button>
+      </div>
+      <div class="side-foot">
+        <div class="acct-card" id="acct-card" hidden>
+          <div class="acct-row"><span>Balance</span><b id="acct-balance">–</b></div>
+          <div class="acct-row"><span id="acct-type">Account</span><a href="#" data-ext="https://console.twilio.com/us1/billing/manage-billing/billing-overview" id="acct-topup">Add funds</a></div>
+        </div>
+        <div class="status-line" id="status-line"><i></i><span>Not set up</span></div>
+        <button class="nav-btn" data-view="settings" title="Settings (⌘5)" aria-label="Settings">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" stroke-linecap="round"/></svg>
+          <span class="lbl">Settings</span><kbd>⌘5</kbd>
+          <span class="dot" id="settings-dot" hidden></span>
+        </button>
+        <button class="collapse-btn" id="side-collapse" title="Collapse sidebar" aria-label="Collapse sidebar">
+          <svg viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
     </nav>
 
     <main class="views">
@@ -57,6 +88,7 @@
         <aside class="glass convo-panel">
           <header class="panel-head">
             <h1>Messages</h1>
+            <button class="pill-btn ghostish" id="mark-read" hidden title="Mark every conversation as read">Mark all read</button>
             <button class="icon-btn" id="new-msg" title="New message (⌘N)" aria-label="New message">
               <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
             </button>
@@ -66,7 +98,7 @@
             <input id="convo-search" placeholder="Search" autocomplete="off">
           </div>
           <ul class="convos" id="convos"></ul>
-          <div class="empty-note" id="convos-empty" hidden>No conversations yet.<br>Tap the pencil to text someone.</div>
+          <div class="empty-note" id="convos-empty" hidden>No conversations yet.<br><button class="pill-btn primary" id="empty-new-msg">Text someone</button></div>
         </aside>
 
         <div class="glass thread-panel">
@@ -97,6 +129,7 @@
               <svg viewBox="0 0 24 24"><path d="M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.13 4.17 2.94 5.54-.13 1.34-.7 2.6-1.66 3.55 2.1-.02 3.88-.8 5.02-1.66.86.2 1.76.32 2.7.32 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5Z"/></svg>
             </div>
             <p>Pick a conversation or start a new one.</p>
+            <button class="pill-btn primary" id="thread-empty-new">New message</button>
           </div>
           <div class="attach-preview" id="attach-preview" hidden>
             <img id="attach-img" alt="">
@@ -111,6 +144,7 @@
             </button>
             <input type="file" id="attach-input" accept="image/jpeg,image/png,image/gif,image/heic,image/heif,.heic,.heif" hidden>
             <textarea id="compose-text" rows="1" placeholder="Text message"></textarea>
+            <span class="seg-count" id="seg-count" hidden></span>
             <button class="send-btn" id="send-btn" type="submit" aria-label="Send" disabled>
               <svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -123,6 +157,14 @@
         <div class="glass dialer">
           <input class="dial-display" id="dial-number" placeholder="Enter number" autocomplete="off" inputmode="tel">
           <div class="dial-name" id="dial-name">&nbsp;</div>
+          <div class="dial-quick" id="dial-quick">
+            <button class="pill-btn" id="dial-msg" disabled>
+              <svg viewBox="0 0 24 24"><path d="M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.13 4.17 2.94 5.54-.13 1.34-.7 2.6-1.66 3.55 2.1-.02 3.88-.8 5.02-1.66.86.2 1.76.32 2.7.32 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5Z"/></svg>Message</button>
+            <button class="pill-btn" id="dial-drop" disabled>
+              <svg viewBox="0 0 24 24"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10.5v3" stroke-linecap="round"/></svg>Play a clip</button>
+            <button class="pill-btn" id="dial-paste" title="Paste a number">
+              <svg viewBox="0 0 24 24"><rect x="6" y="4.5" width="12" height="16" rx="2.5"/><path d="M9.5 4.5V3.5h5v1" stroke-linecap="round"/></svg>Paste</button>
+          </div>
           <div class="keypad" id="keypad"></div>
           <div class="dial-actions">
             <span></span>
@@ -140,7 +182,17 @@
               <button class="on" id="tab-recents" role="tab">Recents</button>
               <button id="tab-people" role="tab">People</button>
             </div>
+            <button class="link-btn" id="clear-recents" hidden>Clear</button>
           </header>
+          <div class="call-stats" id="call-stats">
+            <div><b id="stat-today">0</b><span>calls today</span></div>
+            <div><b id="stat-talk">0:00</b><span>talk time this week</span></div>
+            <div><b id="stat-people">0</b><span>people</span></div>
+          </div>
+          <div class="search people-search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4" stroke-linecap="round"/></svg>
+            <input id="people-search" placeholder="Search names and numbers" autocomplete="off">
+          </div>
           <ul class="people" id="recents"></ul>
           <div class="empty-note" id="recents-empty">Calls you make show up here.</div>
           <ul class="people" id="people" hidden></ul>
@@ -240,12 +292,41 @@
         <div class="settings-col">
         <div class="glass settings-card">
           <header class="panel-head"><h1>Settings</h1></header>
-          <p class="hint" id="welcome-hint">Connect your Twilio account to start texting and calling. You'll find these on the
-            <a href="#" data-ext="https://console.twilio.com">Twilio console</a> home page.</p>
+          <div class="connected" id="connected" hidden>
+            <div class="connected-top">
+              <div class="avatar ok"><svg viewBox="0 0 24 24"><path d="m6 12.5 4 4 8-9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"/></svg></div>
+              <div class="connected-text"><b id="conn-name">Connected to Twilio</b><span id="conn-detail"></span></div>
+            </div>
+            <div class="connected-actions">
+              <button class="pill-btn" id="conn-edit">Change account or number</button>
+              <a class="pill-btn" href="#" data-ext="https://console.twilio.com">Open Twilio</a>
+            </div>
+          </div>
+          <div class="connect" id="connect">
+            <p class="hint" id="welcome-hint">Connect your Twilio account to start texting and calling. It takes about a minute.</p>
+            <ol class="connect-steps">
+              <li>
+                <span class="num">1</span>
+                <div><b>Open your Twilio account</b><small>Sign in. No account yet? <a href="#" data-ext="https://www.twilio.com/try-twilio">Sign up free</a>.</small></div>
+                <button type="button" class="pill-btn primary" id="connect-open">Connect Twilio</button>
+              </li>
+              <li>
+                <span class="num">2</span>
+                <div><b>Copy your Account SID, then your Auth Token</b><small id="clip-hint">Glass Phone fills them in as you copy. They're under "Account Info".</small></div>
+                <button type="button" class="pill-btn" id="connect-paste">Paste</button>
+              </li>
+              <li>
+                <span class="num">3</span>
+                <div><b>Pick your number and connect</b><small id="numbers-hint">Your Twilio numbers show up here.</small></div>
+              </li>
+            </ol>
+          </div>
           <form id="settings-form" autocomplete="off">
             <label class="field"><span>Account SID</span><input id="set-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false"></label>
             <label class="field"><span>Auth Token</span><input id="set-token" type="password" placeholder="Paste your Auth Token" spellcheck="false"></label>
-            <label class="field"><span>Your Twilio number</span><input id="set-from" placeholder="+1 555 555 0100" spellcheck="false"></label>
+            <label class="field"><span>Your Twilio number</span>
+              <select id="set-from-pick" hidden></select>
+              <input id="set-from" placeholder="+1 555 555 0100" spellcheck="false"></label>
             <button class="primary-btn" id="settings-save" type="submit">Save &amp; set up</button>
           </form>
           <ul class="steps" id="setup-steps"></ul>
@@ -278,7 +359,7 @@
             <li><strong>Texting US numbers</strong> from a paid account needs your number registered (toll-free verification or A2P 10DLC), or carriers may block messages.</li>
             <li><strong>Audio calls</strong> to cell phones need the person's OK to receive recorded messages.</li>
             <li>Uploaded clips are stored in your Twilio account at hard-to-guess web links, so only someone with the exact link can play them.</li>
-            <li><strong>Shortcuts:</strong> ⌘1–5 switch tabs, ⌘N new message, ⌘F search. On a call, type digits to use the keypad.</li>
+            <li><strong>Shortcuts:</strong> ⌘1–5 switch tabs, ⌘N new message, ⌘F search, ⌘\ shows or hides the sidebar labels. Double-click a text to copy it. On a call, type digits to use the keypad.</li>
           </ul>
         </div>
         </div>
@@ -322,9 +403,9 @@
   <datalist id="people-list"></datalist>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
-  <script src="api-web.js?v=1.4.0.3"></script>
-  <script src="motion.js?v=1.4.0.3"></script>
-  <script src="app.js?v=1.4.0.3"></script>
-  <script src="mobile.js?v=1.4.0.3"></script>
+  <script src="api-web.js?v=1.4.0"></script>
+  <script src="motion.js?v=1.4.0"></script>
+  <script src="app.js?v=1.4.0"></script>
+  <script src="mobile.js?v=1.4.0"></script>
 </body>
 </html>

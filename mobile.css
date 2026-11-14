@@ -4,7 +4,7 @@
 html, body { background: #0b0d1e; }
 body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
 .dragbar { display: none; }
-.back-btn, .phone-tabs, .nav-btn .lbl, .install-tip { display: none; }
+.back-btn, .phone-tabs, .install-tip { display: none; }
 .rec-side .web-note { margin: 16px 22px 0; }
 
 /* ---------- touch screens: no hover effects (iOS keeps :hover after a tap) ---------- */
@@ -67,17 +67,28 @@ body { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
   .sidebar {
     position: fixed; z-index: 30; left: 12px; right: 12px; bottom: var(--bar-gap);
     width: auto; height: var(--tabbar); padding: 6px; border-radius: 32px;
-    flex-direction: row; justify-content: space-between; align-items: center;
+    flex-direction: row; justify-content: space-between; align-items: center; gap: 0; overflow: visible;
     transition: transform .5s var(--spring-soft), opacity .3s var(--out);
   }
   body.win .sidebar { padding-top: 6px; }
-  .nav-top { display: contents; }
-  .nav-btn { flex: 1; width: auto; height: 52px; border-radius: 26px; flex-direction: column; gap: 1px; display: flex; align-items: center; justify-content: center; }
-  .nav-btn svg { width: 23px; height: 23px; }
-  .nav-btn .lbl { display: block; font-size: 10px; font-weight: 600; letter-spacing: .01em; line-height: 1; }
+  /* the desktop sidebar's extras (name, number, quick actions, balance) stay on the desktop */
+  .nav-top, .side-foot { display: contents; }
+  .brand, .side-actions, .acct-card, .status-line, .collapse-btn, .nav-btn kbd, .nav-btn .count { display: none !important; }
+  .sidebar .nav-btn { flex: 1; width: auto; height: 52px; padding: 0; border-radius: 26px; flex-direction: column; gap: 1px; display: flex; align-items: center; justify-content: center; }
+  .sidebar .nav-btn svg { width: 23px; height: 23px; }
+  .nav-btn .lbl { display: block; flex: none; font-size: 10px; font-weight: 600; letter-spacing: .01em; line-height: 1; }
   .nav-glider i { border-radius: 26px; }
-  .nav-btn .badge { top: 2px; right: calc(50% - 24px); }
-  .nav-btn .dot { top: 5px; right: calc(50% - 17px); }
+  .sidebar .nav-btn .badge { position: absolute; top: 2px; right: calc(50% - 24px); border: 1.5px solid rgba(20,20,40,.6); }
+  .sidebar .nav-btn .dot { position: absolute; top: 5px; right: calc(50% - 17px); }
+  /* Phone page extras on a phone: keep the search, skip the stats */
+  .call-stats { display: none; }
+  .people-search { margin: 10px 12px 2px; }
+  .dial-quick { margin: -4px 0 12px; gap: 6px; }
+  .dial-quick .pill-btn { height: 32px; font-size: 12.5px; }
+  .connect-steps { margin: 12px 18px 2px; }
+  .connect-steps li { flex-wrap: wrap; }
+  .connected { margin: 2px 18px 0; }
+  .pill-btn.ghostish { height: 30px; }
   body.kb .sidebar, body.thread-open .sidebar { transform: translateY(calc(100% + 40px)); opacity: 0; pointer-events: none; }
 
   /* ---- screens ---- */

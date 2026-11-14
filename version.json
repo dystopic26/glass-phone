@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0.3",
-  "build": "1.4.0.3-79e851fe65",
-  "notes": "Fits the iPhone screen with no empty band at the bottom. If you still see the band, remove Glass Phone from your Home Screen and add it again."
+  "version": "1.4.0",
+  "build": "1.4.0-a04d38130b",
+  "notes": "Connect Twilio in one tap, a fuller Phone page, drafts, clickable links, text-length counter, and lots of polish."
 }

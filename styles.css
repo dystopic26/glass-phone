@@ -564,8 +564,123 @@ select option { background: #1d1f2c; }
 .retry-btn:hover { text-decoration: underline; }
 
 @media (max-width: 1120px) {
-  .people-panel { display: none; }
   .drop-panel { width: 340px; }
   .rec-side { width: 300px; }
   .settings-card.info { display: none; }
 }
+
+/* ================= 1.4: roomier sidebar, fuller Phone page, setup & QoL ================= */
+
+/* ---------- sidebar: labels, your number, quick actions, account ---------- */
+.sidebar { width: 232px; align-items: stretch; justify-content: flex-start; gap: 14px; padding: 54px 12px 12px; transition: width .45s var(--out, ease), padding .45s var(--out, ease); overflow: hidden; }
+body.win .sidebar { padding-top: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; min-width: 0; }
+.brand-icon { width: 38px; height: 38px; border-radius: 10px; flex: none; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+.brand-text { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.brand-text b { font-size: 15px; letter-spacing: -.01em; white-space: nowrap; }
+.my-number { background: none; border: 0; padding: 0; color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; font-variant-numeric: tabular-nums; }
+.my-number:hover { color: var(--ink-2); }
+.nav-top { gap: 4px; }
+.sidebar .nav-btn { width: 100%; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 0 12px; }
+.sidebar .nav-btn svg { width: 21px; height: 21px; }
+.nav-btn .lbl { flex: 1; text-align: left; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.nav-btn kbd { font: 600 11px var(--font); color: var(--ink-3); background: rgba(255,255,255,.07); border-radius: 6px; padding: 2px 6px; }
+.nav-btn:has(.badge:not([hidden])) kbd, .nav-btn:has(.dot:not([hidden])) kbd { display: none; }
+.sidebar .nav-btn .badge { position: static; border: 0; }
+.sidebar .nav-btn .dot { position: static; flex: none; }
+.nav-btn .count { font-size: 12px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.nav-btn:has(.count:not([hidden])) kbd { display: none; }
+.nav-glider i { border-radius: 14px; }
+.side-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.side-act {
+  height: 62px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: var(--ink-2); font-size: 11.5px; font-weight: 600;
+}
+.side-act svg { width: 19px; height: 19px; }
+.side-act:hover { background: rgba(255,255,255,.12); color: var(--ink); }
+.side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+.acct-card { padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,.18); border: 1px solid rgba(255,255,255,.1); display: grid; gap: 4px; font-size: 12px; }
+.acct-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--ink-3); white-space: nowrap; }
+.acct-row b { color: var(--ink); font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.acct-row a { color: #7cc0ff; text-decoration: none; font-weight: 600; }
+.acct-card.low #acct-balance { color: var(--amber); }
+.status-line { display: flex; align-items: center; gap: 8px; padding: 2px 12px; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.status-line i { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.status-line.ok i { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.status-line.off i { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.collapse-btn { align-self: flex-end; width: 28px; height: 28px; border-radius: 9px; background: none; border: 0; color: var(--ink-3); display: grid; place-items: center; -webkit-app-region: no-drag; }
+.collapse-btn svg { width: 16px; height: 16px; transition: transform .45s var(--out, ease); }
+.collapse-btn:hover { color: var(--ink); background: rgba(255,255,255,.08); }
+.side-act, .my-number, .acct-row a { -webkit-app-region: no-drag; }
+
+/* icons only: when you collapse it, or the window is narrow */
+body.side-mini .sidebar { width: 76px; padding: 58px 0 12px; align-items: center; }
+body.win.side-mini .sidebar { padding-top: 18px; }
+body.side-mini .brand { padding: 0; }
+body.side-mini :is(.brand-text, .nav-btn .lbl, .nav-btn kbd, .nav-btn .count, .side-act span, .acct-card, .status-line span) { display: none; }
+body.side-mini .sidebar .nav-btn { width: 50px; height: 50px; border-radius: 18px; padding: 0; justify-content: center; }
+body.side-mini .sidebar .nav-btn svg { width: 24px; height: 24px; }
+body.side-mini .sidebar .nav-btn .badge { position: absolute; top: 4px; right: 2px; border: 1.5px solid rgba(20,20,40,.6); }
+body.side-mini .sidebar .nav-btn .dot { position: absolute; top: 9px; right: 9px; }
+body.side-mini .nav-glider i { border-radius: 18px; }
+body.side-mini .side-actions { grid-template-columns: 1fr; gap: 6px; }
+body.side-mini .side-act { width: 50px; height: 44px; border-radius: 14px; }
+body.side-mini .side-foot { align-items: center; }
+body.side-mini .status-line { padding: 4px 0; }
+body.side-mini .collapse-btn { align-self: center; }
+body.side-mini .collapse-btn svg { transform: rotate(180deg); }
+body.side-forced .collapse-btn { display: none; }
+
+/* ---------- Phone page: keypad + a full-width Recents/People panel ---------- */
+#view-phone { justify-content: stretch; }
+.dialer { width: 380px; justify-content: center; }
+#view-phone .people-panel { flex: 1; width: auto; min-width: 300px; }
+.people-panel .panel-head .link-btn { font-size: 12.5px; }
+.dial-quick { display: flex; gap: 8px; margin: -6px 0 18px; flex-wrap: wrap; justify-content: center; }
+.dial-quick .pill-btn { padding: 0 12px 0 10px; }
+.dial-quick .pill-btn:disabled { opacity: .38; cursor: default; }
+.call-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 16px 12px; }
+.call-stats div { padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,.16); border: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; min-width: 0; }
+.call-stats b { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.call-stats span { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.people-search { margin: 0 16px 8px; }
+.person .snip { color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.people-panel .person .icon-btn { opacity: .75; }
+.person:hover .icon-btn { opacity: 1; }
+
+/* ---------- messages ---------- */
+.pill-btn.ghostish { margin-left: auto; height: 30px; padding: 0 12px; font-size: 12px; background: rgba(255,255,255,.08); }
+.empty-note .pill-btn, .thread-empty .pill-btn { margin-top: 12px; }
+.seg-count { align-self: center; font-size: 11px; font-weight: 600; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; padding: 0 2px; }
+.seg-count.warn { color: var(--amber); }
+.bubble a.lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
+.bubble.in a.lnk { color: #9cd0ff; }
+.day.gap { margin: 10px 0 6px; }
+
+/* ---------- settings: Connect Twilio ---------- */
+.connect-steps { list-style: none; margin: 14px 22px 2px; padding: 0; display: grid; gap: 8px; }
+.connect-steps li { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: rgba(0,0,0,.16); border: 1px solid rgba(255,255,255,.08); transition: background .4s, border-color .4s; }
+.connect-steps li.done { border-color: rgba(48,209,88,.45); background: rgba(48,209,88,.08); }
+.connect-steps .num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: rgba(255,255,255,.12); flex: none; }
+.connect-steps li.done .num { background: var(--green); color: #062b10; font-size: 0; }
+.connect-steps li.done .num::after { content: "✓"; font-size: 13px; font-weight: 800; }
+.connect-steps li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.connect-steps b { font-size: 13.5px; }
+.connect-steps small { color: var(--ink-3); font-size: 12px; }
+.connect-steps .pill-btn { flex: none; padding: 0 14px; }
+.connected { margin: 2px 22px 0; padding: 14px; border-radius: 18px; background: rgba(48,209,88,.08); border: 1px solid rgba(48,209,88,.35); }
+.connected-top { display: flex; align-items: center; gap: 12px; }
+.avatar.ok { background: linear-gradient(160deg, #4ae070, #30d158); }
+.connected-text { display: flex; flex-direction: column; min-width: 0; }
+.connected-text span { color: var(--ink-2); font-size: 12.5px; }
+.connected-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.connected-actions .pill-btn { padding: 0 14px; text-decoration: none; color: var(--ink); }
+#settings-form.tucked, .connect.tucked { display: none; }
+#set-from-pick { margin: 0; }
+.primary-btn.ready { animation: readyGlow 1.8s ease-in-out infinite; }
+@keyframes readyGlow { 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 6px rgba(10,132,255,.22), 0 10px 26px rgba(10,132,255,.45); } }
+.offline-banner { position: fixed; z-index: 90; top: 12px; left: 50%; translate: -50% 0; padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: rgba(255,69,58,.9); color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.dialer { padding-left: 28px; padding-right: 28px; }
+.dial-quick { gap: 6px; flex-wrap: nowrap; }
+.dial-quick .pill-btn { padding: 0 11px 0 9px; font-size: 12px; gap: 5px; height: 32px; }
+.dial-quick .pill-btn svg { width: 15px; height: 15px; }
