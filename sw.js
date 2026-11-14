@@ -1,7 +1,7 @@
 // Keeps a copy of Glass Phone on the phone so it opens instantly (and without a
 // connection). A new version is downloaded in the background and switched to
 // when you tap "Restart" in the app.
-const VERSION = "1.4.0-a04d38130b";
+const VERSION = "1.4.0.4-4af166ccc4";
 const FILES = ["./","api-web.js","app.js","icon.png","icons/apple-touch-icon.png","icons/icon-192.png","icons/icon-512.png","manifest.webmanifest","mobile.css","mobile.js","motion.css","motion.js","recorder-worklet.js","styles.css","twilio.min.js"];
 const CACHE = 'glass-phone-' + VERSION;
 

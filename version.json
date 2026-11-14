@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
-  "build": "1.4.0-a04d38130b",
+  "version": "1.4.0.4",
+  "build": "1.4.0.4-4af166ccc4",
   "notes": "Connect Twilio in one tap, a fuller Phone page, drafts, clickable links, text-length counter, and lots of polish."
 }
