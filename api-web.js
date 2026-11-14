@@ -4,7 +4,7 @@
 // "main process". It talks to Twilio straight from the phone (Twilio's API allows
 // that), keeps settings on the phone, and keeps call recordings in the app's storage.
 (function () {
-  const VERSION = '1.4.0.4'; // filled in by scripts/build-web.js
+  const VERSION = '1.4.0.5'; // filled in by scripts/build-web.js
   const LABEL = 'Glass Phone (iPhone)'; // name for what setup creates in Twilio
   const MAX_CLIP_BYTES = 20 * 1024 * 1024;
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -789,7 +789,10 @@
 
   // ---------- updates (the service worker keeps a copy of the app on the phone) ----------
 
-  const up = { current: VERSION, enabled: 'serviceWorker' in navigator, status: 'idle', available: null, progress: 0, error: null };
+  // Inside the native iPhone app (an IPA), the page is loaded fresh from the web, so an
+  // update is just a reload; there's no offline copy to swap.
+  const NATIVE = /GlassPhoneNative/.test(navigator.userAgent);
+  const up = { current: VERSION, enabled: NATIVE || 'serviceWorker' in navigator, status: 'idle', available: null, progress: 0, error: null };
   let reg = null;
   const setUp = (patch) => {
     Object.assign(up, patch);
@@ -819,7 +822,7 @@
   }
 
   async function checkUpdate({ manual } = {}) {
-    if (!up.enabled || !reg) {
+    if (!up.enabled || (!reg && !NATIVE)) {
       if (manual) throw new Error('Updates aren’t available here. Open Glass Phone from your Home Screen.');
       return { ...up };
     }
@@ -833,6 +836,10 @@
         return { ...up };
       }
       setUp({ status: 'downloading', available: { version: String(feed.version), notes: String(feed.notes || ''), page: '' }, progress: 0.3 });
+      if (NATIVE) {
+        setUp({ status: 'ready', progress: 1 });
+        return { ...up };
+      }
       const ready = waitForWorker();
       await reg.update();
       await Promise.race([ready, sleep(60000).then(() => Promise.reject(new Error('The update took too long to download. It will be tried again later.')))]);
@@ -845,12 +852,17 @@
   }
 
   function installUpdate() {
+    if (NATIVE && up.status === 'ready') return location.replace(location.pathname + '?v=' + encodeURIComponent(up.available.version));
     if (up.status !== 'ready' || !reg || !reg.waiting) throw new Error('No update is ready yet.');
     navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
     reg.waiting.postMessage('skipWaiting');
   }
 
-  if (up.enabled && location.protocol !== 'file:') {
+  if (NATIVE) {
+    setTimeout(() => checkUpdate().catch(() => {}), 6000);
+    setInterval(() => checkUpdate().catch(() => {}), 30 * 60e3);
+    document.addEventListener('visibilitychange', () => !document.hidden && Date.now() - (up.lastCheck || 0) > 10 * 60e3 && checkUpdate().catch(() => {}));
+  } else if (up.enabled && location.protocol !== 'file:') {
     navigator.serviceWorker
       .register('sw.js')
       .then((r) => {
